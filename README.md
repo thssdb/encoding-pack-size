@@ -14,7 +14,7 @@ Artifacts and Python tooling for the **pack-size optimization** experiments repo
 **What this tree contains**
 
 - Python scripts that read experiment outputs (CSV / Excel) and generate paper figures.
-- A subset of **public float / numeric CSV datasets** under `ElfTestData_camel/` used in the evaluation.
+- A subset of **public float / numeric CSV datasets** under `TestData/` used in the evaluation.
 
 **What is not vendored here**
 
@@ -74,38 +74,33 @@ Outputs are written under `./figure_for_paper/` (and similar folders) as PNG/EPS
 
 ## 4. Figure ↔ script mapping (paper cross-reference)
 
-| Manuscript item | Script | Test Function of Results | Note|
-|-----------------|--------|--------|--------|
-| **Figure 2** — distribution of **optimal pack sizes** for real-world datasets (**Table 2**), **BP** vs **Sprintz** | `fig2_draw_run_lengths.py` | `FeatureTest()` and `FeatureAfterSprintzTest()` of `src/AllNo8PacksizeOptimal.java` | Builds combined histograms from `data/features_and_best_p.csv` (BP) and `data/features_and_best_p_sprintz.csv` (Sprintz). |
+|    Manuscript item    | Script | Test Function of Results | Note|
+|-----------------------------|--------|--------|--------|
+| Figure 2: Distribution of optimal pack sizes for real world datasets (Table 2) compressed by BP and Sprintz | `fig2_draw_run_lengths.py` | `FeatureTest()` and `FeatureAfterSprintzTest()` of `src/AllNo8PacksizeOptimal.java` | Builds combined histograms from `data/features_and_best_p.csv` (BP) and `data/features_and_best_p_sprintz.csv` (Sprintz). |
 | Figure 3: Total storage cost of 1024 values of dataset PM10
 (Table 2) under various pack sizes 𝑠. It consists of two parts,
 the bit width cost and the value cost. | `fig_of_cost_values_bitwidth_in_chunk(csv_dir, chunk_output, chunk_size=1024)` of `fig3_cost_vary_pack_size.py` | `testPackSizeCostAnalysis()` of  `src/AllNo8PacksizeOptimal.java` | |
-| Figure 4: Example on unimodality of the cost function 𝐶(𝑠) on a subset of pack sizes 𝑠 = 3 ∗ 2^𝛽 , 𝛽 = 0, 1, 2, . . . , according to
-Proposition 1 |  `create_chunk_vary_3_plots(csv_dir, chunk_output, chunk_size=1024)` of `fig3_cost_vary_pack_size.py`  | `testPackSizeCostAnalysis()` of  `src/AllNo8PacksizeOptimal.java` | |
-| Cost vs pack size | `fig_cost_vary_pack_size.py` | Expects `*_cost.csv` or cost exports with `pack size` / `cost` columns. |
-| Vary pack size (curves) | `fig_vary_pack_size.py` | Reads per-algorithm output directories. |
-| Vary page size | `fig_vary_page_size.py` | Reads configured `output_*_vary_page_size` directories. |
-| Pruning vs page size | `fig_pruning_vary_page_size.py` | Same pattern as other `fig_*` drivers. |
-| Prune-Plus filter experiment | `fig_fileter_p_prune_plus.py` | As named in repo. |
+| Figure 4: Example on unimodality of the cost function 𝐶(𝑠) on a subset of pack sizes 𝑠 = 3*2^𝛽 , 𝛽 = 0, 1, 2, . . . , according to Proposition 1 |  `create_chunk_vary_3_plots(csv_dir, chunk_output, chunk_size=1024)` of `fig3_cost_vary_pack_size.py`  | `testPackSizeCostAnalysis()` of  `src/AllNo8PacksizeOptimal.java` | |
+| Figure 11: Data characters predict the impact of optimal pack sizes |  `fig11_data_characters_predict.py` | `OptimalPackSizePruneRMQFeatureOutputTest()` of `src/AllNo8PacksizeOptimal.java` | |
+| Figure 12: Improvement of compression ratio of BP-Prune-RMQ and Sprintz-Prune-RMQ | `fig12_improve_compare_ratio.py` | `BPTest()`, `OptimalPackSizePruneRMQTest`,`OptimalPackSizePruneRMQSprintzTest()`,`SprintzTest()` of `src/AllNo8PacksizeOptimal.java`  and `fig_combine_results.py`| |
+| Figure 13: The compression performance of ALP and CuSZp2 with (without) optimal pack size | `fig13_alp_cuszp_pack8_vs_v5_combined.py` | `test0()` and `test1_optimalPackV5()` of `src/ALPTest.java`, `cuSZpCpu1DTest()` and `cuSZpCpu1DOptimalV5Test()` of `src/CuSZpCpuTest.java` | |
+| Figure 14: Comparison with Other Algorithms | `fig14_compare_baseline.py` | `BPTest()`, `Simple8bTest()` and `OptimalPackSizePruneRMQTest()` of `src/AllNo8PacksizeOptimal.java`, `test0()` of `src/HBPIndexLongTest.java`, `testAllCompressor()` of `TestCompressorPacksize.java` | put `TestCompressorPacksize.java` into `SElfStar/src/test/java/` of https://github.com/Spatio-Temporal-Lab/SElfStar |
+| Figure 15: Performance under various fixed pack size 𝑠 | `fig15_vary_pack_size.py` | `OptimalPackSizePruneRMQTest()`, `OptimalPackSizePruneRMQTest()`, `OptimalPackSizePrunePlusTest()`,`OptimalPackSizeRMQSprintzTest`, `OptimalPackSizeN2SprintzTest()`, `OptimalPackSizePrunePlusSprintzTest`,  `VaryPackSizeTest()` and `VaryPackSizeSprintzTest()` of `src/AllNo8PacksizeOptimal.java`  | |
+| Figure 16: Performance under various page sizes 𝑛 | `fig16_vary_page_size.py` |`TestVariablePageSizeBP()`,`TestVariablePageSizeSprintz()`,`TestVariablePageSizeBPN2()`,`TestVariablePageSizeSprintzN2`,`TestVariablePageSizeBPonlyPrune()`,`TestVariablePageSizeSprintzonlyPrune()`, `TestVariablePageSizeBPPruneRMQ()`, `TestVariablePageSizeSprintzPruneRMQ()`, `VaryPageSizeOptimalPackSizeFiltersPlusTest()`, and `VaryPageSizeOptimalPackSizeFiltersPlusSprintzTest()` of `src/AllNo8PacksizeOptimal.java` |   |
+| Figure 17: Impact of sorting non-time-series data on bit-packing with optimal pack size | `fig17_vary_pack_size_sort.py` | `VaryPackSizeTest()`,`VaryPackSizeSortTest()`,`VaryPackSizeSprintzTest()`,`VaryPackSizeSprintzSortTest()` of `src/AllNo8PacksizeOptimal.java` |  |
+| Figure 18: Compression performance of bit-packing with pre-defined pack sizes and all pack sizes | `fig18_vary_pack_size_candidate_limited.py` | `OptimalPackSizePruneRMQLimitedTest()` and `OptimalPackSizePruneRMQTest()` of `src/AllNo8PacksizeOptimal.java`  | |
+| Figure 19: Compression performance of bit-packing optimal pack size with SIMDComp, Fastlane and SIMT | `fig19_simd.py` |  | |
+| Figure 20: Compression performance impact after deployment in the real system | `fig20_system.py` | | |
+| Figure 21: Pruning rate of candidate pack sizes on various datasets | `fig21_fileter_p_prune_plus.py` | `OptimalPackSizeFiltersPlusTest()` and `OptimalPackSizeFiltersSprintzPlusTest()` of `src/AllNo8PacksizeOptimal.java` | |
 
 ---
 
 ## 5. Floating-point experiments: code path and lossless conversion
 
-- **Datasets (floating-point columns as stored in CSV):** under `ElfTestData_camel/` (e.g. `City-temp.csv`, `Wind-Speed.csv`, …). These files are the **inputs** to the benchmark runs that produced the compression logs consumed by the figure scripts.
+- **Datasets (floating-point columns as stored in CSV):** under `TestData/` (e.g. `City-temp.csv`, `Wind-Speed.csv`, …). These files are the **inputs** to the benchmark runs that produced the compression logs consumed by the figure scripts.
 - **Where floating-point values become integers for encoding:** that conversion (scaling, fixed-point representation, ZigZag, or similar) is performed **inside the compression benchmark**, not in the Python files in this repository. This README therefore **cannot** assert losslessness from this tree alone.
 
 **Clarification for reviewers (authors must align with the actual encoder):**
 
 - State in the **benchmark repository README** whether the FP→integer mapping used in the reported experiments is **bit-exact reversible** (lossless for the values present in each column) or **lossy** (e.g. rounding to a fixed grid), and cite the **exact class / function** that performs the mapping.
 - If the pipeline uses **textual CSV parsing followed by decimal parsing into a fixed-width integer representation with no rounding beyond representable integers**, say so explicitly; otherwise describe the rounding rule.
-
----
-
-## 6. Checklist for a complete artifact (submission response)
-
-1. [ ] **Encoder repo** linked with branch + commit + build/run instructions for dynamic packing.  
-2. [ ] **This repo** `README` commit hash updated after any push.  
-3. [ ] **Sample `data/`** and `output_*` **or** a small downloadable archive so `fig2_draw_run_lengths.py` runs without a full recompute.  
-4. [ ] **FP→int** policy documented next to the encoder entry point used for `ElfTestData_camel/` runs.
-

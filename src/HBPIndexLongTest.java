@@ -222,8 +222,8 @@ public class HBPIndexLongTest {
 
     @Test
     public void test0() throws IOException {
-        String directory = "/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/ElfTestData_camel";
-        String outputDirStr = "/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Bitweaving";
+        String directory = "../TestData";
+        String outputDirStr = "../output_Bitweaving";
         int block_size = 1024;
         int repeatTime = 500;
 

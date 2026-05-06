@@ -85,7 +85,7 @@ def plot_bar(results, outpath, title='Count of pruned pack sizes in each dataset
     tick_fs = fontsize
     annot_fs = fontsize
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 4))
     bars = plt.bar(range(len(values)), values, color='C0')
     plt.xticks(range(len(names)), names, rotation=45, ha='right', fontsize=tick_fs)
     plt.yticks(fontsize=tick_fs)
@@ -198,7 +198,7 @@ def sprintz_plot_bar(results, outpath, title='Pruning rate of pack sizes on data
     tick_fs = fontsize
     annot_fs = fontsize
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 4))
     bars = plt.bar(range(len(values)), values, color='C0')
     plt.xticks(range(len(names)), names, rotation=45, ha='right', fontsize=tick_fs)
     plt.yticks(fontsize=tick_fs)
@@ -241,7 +241,7 @@ dataset_mapping = {
     'Stocks-UK.csv': 'SUK',
     'Stocks-USA.csv': 'SUA',
     'Stocks-DE.csv': 'SDE',
-    'Bitcoin-price.csv': 'BP',
+    # 'Bitcoin-price.csv': 'BP',
     'Bird-migration.csv': 'BM',
     # 'Cpu-usage_right.csv': 'CPU',
     # 'Disk-usage.csv': 'DISK',
@@ -249,17 +249,22 @@ dataset_mapping = {
     
     # 非时间序列数据集
     'Food-price.csv': 'FP',
-    'electric_vehicle_charging.csv': 'VC',
+    # 'electric_vehicle_charging.csv': 'VC',
     'Blockchain-tr.csv': 'BTR',
-    'SSD-bench.csv': 'SB',
+    # 'SSD-bench.csv': 'SB',
     'City-lat.csv': 'CLT',
     'City-lon.csv': 'CLN',
+
+    # new time series data
+    'Cyber-Vehicle.csv': 'CV',
+    'TY-Fuel.csv': 'TF',
+    'TY-Transport.csv': 'TT',
 }
 
 def plot_two_bars(results1, results2, outpath,
                   title1='(a) Pruning rate of pack sizes on datasets (BP)',
                   title2='(b) Pruning rate of pack sizes on datasets (Sprintz)'):
-    """Plot two bar charts on a single figure with 2 rows x 1 column.
+    """Plot two bar charts on a single figure with 1 row x 2 columns.
 
     `results1` and `results2` are mappings name->value.
     """
@@ -274,13 +279,13 @@ def plot_two_bars(results1, results2, outpath,
     # print(results2)
 
 
-    fontsize = 16
+    fontsize = 20
     title_fs = fontsize
     label_fs = fontsize
     tick_fs = fontsize
-    annot_fs = fontsize-2
+    annot_fs = fontsize
 
-    fig, axes = plt.subplots(2, 1, figsize=(8, 10))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
     def map_label(name):
         # try raw name, then name + .csv, fallback to original name
@@ -301,14 +306,14 @@ def plot_two_bars(results1, results2, outpath,
 
     bars = axes[0].bar(range(len(values1)), values1, color='C0')
     axes[0].set_xticks(range(len(names1)))
-    axes[0].set_xticklabels(labels1, rotation=45, ha='right', fontsize=tick_fs)
+    axes[0].set_xticklabels(labels1, rotation=90, ha='center', va='top', fontsize=tick_fs)
     axes[0].tick_params(axis='y', labelsize=tick_fs)
     axes[0].set_xlabel('Dataset', fontsize=label_fs)
-    axes[0].set_ylabel('Percentage (% of 1024)', fontsize=label_fs,y=0.4)
+    axes[0].set_ylabel('Percentage (% of 1024)', fontsize=label_fs,y=0.3)
     axes[0].set_title(title1, fontsize=title_fs)
     top = max(values1) if values1 else 0
     for b, v in zip(bars, values1):
-        axes[0].text(b.get_x() + b.get_width()/2, v + top*0.01, f"{v:.1f}%", ha='center', va='bottom', rotation=30, fontsize=annot_fs)
+        axes[0].text(b.get_x() + b.get_width()/2, v + top*0.01, f"{v:.1f}", ha='center', va='bottom', rotation=90, fontsize=annot_fs)
     if top <= 100:
         axes[0].set_ylim(0, max(100, top * 1.05))
 
@@ -322,14 +327,14 @@ def plot_two_bars(results1, results2, outpath,
 
     bars2 = axes[1].bar(range(len(values2)), values2, color='C1')
     axes[1].set_xticks(range(len(names2)))
-    axes[1].set_xticklabels(labels2, rotation=45, ha='right', fontsize=tick_fs)
+    axes[1].set_xticklabels(labels2, rotation=90, ha='center', va='top', fontsize=tick_fs)
     axes[1].tick_params(axis='y', labelsize=tick_fs)
     axes[1].set_xlabel('Dataset', fontsize=label_fs)
-    axes[1].set_ylabel('Percentage (% of 1024)', fontsize=label_fs)
-    axes[1].set_title(title2, fontsize=title_fs)
+    axes[1].set_ylabel('Percentage (% of 1024)', fontsize=label_fs,y=0.3)
+    axes[1].set_title(title2, fontsize=title_fs, x=0.45)
     top2 = max(values2) if values2 else 0
     for b, v in zip(bars2, values2):
-        axes[1].text(b.get_x() + b.get_width()/2, v + top2*0.01, f"{v:.1f}%", ha='center', va='bottom', rotation=30, fontsize=annot_fs)
+        axes[1].text(b.get_x() + b.get_width()/2, v + top2*0.01, f"{v:.1f}", ha='center', va='bottom', rotation=90, fontsize=annot_fs)
     if top2 <= 100:
         axes[1].set_ylim(0, max(100, top2 * 1.05))
 
@@ -368,8 +373,8 @@ def main():
 
     os.makedirs(os.path.dirname(args.output) or '.', exist_ok=True)
     plot_two_bars(results_bp, results_sp, args.output,
-                  title1='(a) Pruning rate of pack sizes on datasets (BP)',
-                  title2='(b) Pruning rate of pack sizes on datasets (Sprintz)')
+                  title1='(a) Pruning rate after BP',
+                  title2='(b) Pruning rate after Sprintz')
 
 if __name__ == '__main__':
     main()

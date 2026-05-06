@@ -1,3 +1,346 @@
+"""
+Compare Sort vs No-sort (3 subplots) using shared legend.
+
+Subplots:
+  (a) Compression ratio (expansion)
+  (b) Compression time (log y-scale)
+  (c) Decompression time
+
+Legend:
+  8 methods = BP-All, BP-All (Sort), BP-Prune-RMQ, BP-Prune-RMQ (Sort), …
+  (Excel rows still use names like "BP (All)" / "Sort-BP (All)".)
+
+Data sources:
+  No-sort:   camel_ratio.xlsx / compression_time.xlsx / decompression_time.xlsx
+  Sort:      sort_camel_ratio.xlsx / sort_compression_time.xlsx / sort_decompression_time.xlsx
+"""
+
+import os
+from collections import OrderedDict
+
+import numpy as np
+import pandas as pd
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+
+BASE = "/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size"
+OUT_DIR = os.path.join(BASE, "figure_for_paper")
+
+# No-sort paths
+NO_SORT_RATIO_PATH = os.path.join(BASE, "camel_ratio.xlsx")
+NO_SORT_COMPRESSION_TIME_PATH = os.path.join(BASE, "compression_time.xlsx")
+NO_SORT_DECOMPRESSION_TIME_PATH = os.path.join(BASE, "decompression_time.xlsx")
+
+# Sort paths
+SORT_RATIO_PATH = os.path.join(BASE, "sort_camel_ratio.xlsx")
+SORT_COMPRESSION_TIME_PATH = os.path.join(BASE, "sort_compression_time.xlsx")
+SORT_DECOMPRESSION_TIME_PATH = os.path.join(BASE, "sort_decompression_time.xlsx")
+
+
+# Algorithm pairs: (no-sort algo name, sort algo name) — must match Excel row names
+# Sprintz 相关的对比在此图中已移除，仅保留 BP 相关两组。
+ALGO_PAIRS = [
+    ("BP (All)", "Sort-BP (All)"),
+    ("BP (Prune-RMQ)", "Sort-BP (Prune-RMQ)"),
+]
+# Legend-only labels (parallel to ALGO_PAIRS)
+ALGO_LEGEND_LABELS = [
+    ("BP-All", "BP-All (Sort)"),
+    ("BP-Prune-RMQ", "BP-Prune-RMQ (Sort)"),
+]
+GROUP_LABELS = [a[0] for a in ALGO_LEGEND_LABELS]
+
+# Colors consistent with fig_vary_pack_size.py
+GROUP_COLORS = ["#9467bd", "#d62728"]
+
+# Error bars — match fig_simd.py (avg across datasets: sample std, ddof=1)
+ERRORBAR_ECOLOR = "k"
+ERRORBAR_CAPSIZE = 2.8
+ERR_KW_BAR = dict(elinewidth=1.1, capthick=1.0, alpha=1.0, zorder=5)
+RATIO_Y_MARGIN_FRAC = 0.05
+
+
+def _bar_with_err(ax, x0, h, w, yerr, **kwargs):
+    kw = dict(x=x0, height=h, width=w, zorder=3, **kwargs)
+    if yerr is not None:
+        kw["yerr"] = yerr
+        kw["ecolor"] = ERRORBAR_ECOLOR
+        kw["capsize"] = ERRORBAR_CAPSIZE
+        kw["error_kw"] = ERR_KW_BAR
+    ax.bar(**kw)
+
+
+def _yerr_for_bar(v: float, std: float, log_scale: bool):
+    if std <= 0 or not np.isfinite(v) or not np.isfinite(std):
+        return None
+    if not log_scale:
+        return std
+    if v <= 0:
+        return None
+    el = float(min(std, v - 1e-12))
+    if el <= 0:
+        return None
+    return np.array([[el], [std]])
+
+
+# Dataset columns in the Excel files (abbreviations)
+dataset_mapping = {
+    "Food-price.csv": "FP",
+    "electric_vehicle_charging.csv": "VC",
+    "Blockchain-tr.csv": "BTR",
+    "SSD-bench.csv": "SB",
+    "City-lat.csv": "CLT",
+    "City-lon.csv": "CLN",
+}
+VALID_DATASETS = set(dataset_mapping.values())
+
+
+def load_ratio_stats_per_algo(path: str, algo_list: list[str]) -> tuple[dict[str, float], dict[str, float]]:
+    """
+    From camel_ratio.xlsx / sort_camel_ratio.xlsx:
+      - first column = algo name
+      - other columns = dataset abbreviations
+      - value = compressed/original => expansion = 1/value
+    Returns (mean_per_algo, std_per_algo); std = sample std across datasets (ddof=1), 0 if n<2.
+    """
+    mean_out: dict[str, float] = {}
+    std_out: dict[str, float] = {}
+    if not os.path.exists(path):
+        return mean_out, std_out
+
+    df = pd.read_excel(path)
+    valid_cols = [c for c in df.columns[1:] if c in VALID_DATASETS]
+    for algo in algo_list:
+        row = df[df.iloc[:, 0] == algo]
+        if row.empty:
+            mean_out[algo] = np.nan
+            std_out[algo] = 0.0
+            continue
+
+        vals = []
+        for col in valid_cols:
+            v = row[col].iloc[0]
+            if pd.notna(v):
+                try:
+                    vals.append(1.0 / float(v))
+                except Exception:
+                    pass
+
+        if vals:
+            mean_out[algo] = float(np.mean(vals))
+            std_out[algo] = float(np.std(vals, ddof=1)) if len(vals) > 1 else 0.0
+        else:
+            mean_out[algo] = np.nan
+            std_out[algo] = 0.0
+    return mean_out, std_out
+
+
+def load_time_stats_per_algo(path: str, algo_list: list[str]) -> tuple[dict[str, float], dict[str, float]]:
+    """
+    From compression_time.xlsx / decompression_time.xlsx:
+      - first column = algo name
+      - other columns = dataset abbreviations
+      - value is stored in a form that the existing project converts via (1/(v/8000)).
+    Returns (mean_per_algo, std_per_algo); std = sample std across datasets (ddof=1), 0 if n<2.
+    """
+    mean_out: dict[str, float] = {}
+    std_out: dict[str, float] = {}
+    if not os.path.exists(path):
+        return mean_out, std_out
+
+    df = pd.read_excel(path)
+    valid_cols = [c for c in df.columns[1:] if c in VALID_DATASETS]
+    for algo in algo_list:
+        row = df[df.iloc[:, 0] == algo]
+        if row.empty:
+            mean_out[algo] = np.nan
+            std_out[algo] = 0.0
+            continue
+
+        vals = []
+        for col in valid_cols:
+            v = row[col].iloc[0]
+            if pd.notna(v):
+                try:
+                    vals.append(1.0 / (float(v) / 8000.0))
+                except Exception:
+                    pass
+
+        if vals:
+            mean_out[algo] = float(np.mean(vals))
+            std_out[algo] = float(np.std(vals, ddof=1)) if len(vals) > 1 else 0.0
+        else:
+            mean_out[algo] = 0.0
+            std_out[algo] = 0.0
+    return mean_out, std_out
+
+
+def plot_compare_sort():
+    all_algos = [a for pair in ALGO_PAIRS for a in pair]
+
+    ratio_no, ratio_no_sd = load_ratio_stats_per_algo(NO_SORT_RATIO_PATH, all_algos)
+    ratio_sort, ratio_sort_sd = load_ratio_stats_per_algo(SORT_RATIO_PATH, all_algos)
+
+    enc_no, enc_no_sd = load_time_stats_per_algo(NO_SORT_COMPRESSION_TIME_PATH, all_algos)
+    enc_sort, enc_sort_sd = load_time_stats_per_algo(SORT_COMPRESSION_TIME_PATH, all_algos)
+
+    dec_no, dec_no_sd = load_time_stats_per_algo(NO_SORT_DECOMPRESSION_TIME_PATH, all_algos)
+    dec_sort, dec_sort_sd = load_time_stats_per_algo(SORT_DECOMPRESSION_TIME_PATH, all_algos)
+
+    # Print compression-time numbers (subplot b)
+    print("\nCompression time mean (ns/point) across datasets:")
+    for (no_name, s_name), (leg_no, leg_s) in zip(ALGO_PAIRS, ALGO_LEGEND_LABELS):
+        v_no = enc_no.get(no_name, np.nan)
+        v_s = enc_sort.get(s_name, np.nan)
+        print(f"  {leg_no}: {v_no:.6g}")
+        print(f"  {leg_s}: {v_s:.6g}")
+
+    n_groups = len(ALGO_PAIRS)
+    x = np.arange(n_groups)
+    width = 0.35
+
+    fontsize = 22
+    plt.rcParams.update({"font.size": fontsize})
+
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+    plt.subplots_adjust(wspace=0.35)
+
+    ratio_ylim_hi = 3.0
+
+    for ax_idx, (ax, vals_no, vals_s, sd_no, sd_s) in enumerate(
+        [
+            (
+                axes[0],
+                [ratio_no.get(no_name, np.nan) for no_name, _ in ALGO_PAIRS],
+                [ratio_sort.get(s_name, np.nan) for _, s_name in ALGO_PAIRS],
+                [ratio_no_sd.get(no_name, 0.0) for no_name, _ in ALGO_PAIRS],
+                [ratio_sort_sd.get(s_name, 0.0) for _, s_name in ALGO_PAIRS],
+            ),
+            (
+                axes[1],
+                [enc_no.get(no_name, np.nan) for no_name, _ in ALGO_PAIRS],
+                [enc_sort.get(s_name, np.nan) for _, s_name in ALGO_PAIRS],
+                [enc_no_sd.get(no_name, 0.0) for no_name, _ in ALGO_PAIRS],
+                [enc_sort_sd.get(s_name, 0.0) for _, s_name in ALGO_PAIRS],
+            ),
+            (
+                axes[2],
+                [dec_no.get(no_name, np.nan) for no_name, _ in ALGO_PAIRS],
+                [dec_sort.get(s_name, np.nan) for _, s_name in ALGO_PAIRS],
+                [dec_no_sd.get(no_name, 0.0) for no_name, _ in ALGO_PAIRS],
+                [dec_sort_sd.get(s_name, 0.0) for _, s_name in ALGO_PAIRS],
+            ),
+        ]
+    ):
+        log_scale = ax_idx == 1
+        for i in range(n_groups):
+            no_name, s_name = ALGO_PAIRS[i][0], ALGO_PAIRS[i][1]
+            leg_no, leg_s = ALGO_LEGEND_LABELS[i]
+            c = GROUP_COLORS[i]
+
+            v_no_raw = vals_no[i]
+            v_s_raw = vals_s[i]
+            v_no = float(np.nan_to_num(v_no_raw, nan=0.0))
+            v_s = float(np.nan_to_num(v_s_raw, nan=0.0))
+            std_no = float(sd_no[i])
+            std_s = float(sd_s[i])
+
+            # log scale: replace non-positive values
+            if ax_idx == 1 and (v_no <= 0.0 or v_s <= 0.0):
+                v_no = max(v_no, 1e-10)
+                v_s = max(v_s, 1e-10)
+
+            yerr_no = _yerr_for_bar(v_no, std_no, log_scale)
+            yerr_s = _yerr_for_bar(v_s, std_s, log_scale)
+
+            if ax_idx == 0:
+                if np.isfinite(v_no_raw):
+                    ratio_ylim_hi = max(ratio_ylim_hi, float(v_no_raw) + std_no)
+                if np.isfinite(v_s_raw):
+                    ratio_ylim_hi = max(ratio_ylim_hi, float(v_s_raw) + std_s)
+
+            _bar_with_err(
+                ax,
+                x[i] - width / 2,
+                v_no,
+                width,
+                yerr_no,
+                color=c,
+                edgecolor="none",
+                linewidth=0,
+                label=leg_no if ax_idx == 0 else None,
+            )
+            _bar_with_err(
+                ax,
+                x[i] + width / 2,
+                v_s,
+                width,
+                yerr_s,
+                color=c,
+                edgecolor="white",
+                linewidth=0.8,
+                hatch="///",
+                label=leg_s if ax_idx == 0 else None,
+            )
+
+    axes[0].set_ylabel("Compression Ratio", fontsize=fontsize)
+    axes[0].set_title("(a) Compression Ratio", fontsize=fontsize)
+    axes[0].set_xlabel("")
+    y0_lo = 3.0
+    span = max(ratio_ylim_hi - y0_lo, 1e-6)
+    margin = max(span * RATIO_Y_MARGIN_FRAC, 0.02 * max(abs(ratio_ylim_hi), 1.0))
+    axes[0].set_ylim(y0_lo, ratio_ylim_hi + margin)
+
+    axes[1].set_ylabel("Time (ns/point)", fontsize=fontsize)
+    axes[1].set_title("(b) Compression Time", fontsize=fontsize)
+    axes[1].set_xlabel("")
+    axes[1].set_yscale("log")
+    axes[1].set_ylim(50, 2000)
+
+    axes[2].set_ylabel("Time (ns/point)", fontsize=fontsize)
+    axes[2].set_title("(c) Decompression Time", fontsize=fontsize)
+    axes[2].set_xlabel("")
+    axes[2].set_ylim(bottom=10)
+
+    # Remove any xtick display (no "0" / "2" etc.)
+    for ax in axes:
+        ax.set_xticks([])
+        ax.tick_params(axis="x", which="both", bottom=False, top=False, labelbottom=False)
+
+    # Shared legend: show 8 methods (4 groups x No-sort/Sort)
+    handles, labels = axes[0].get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    fig.legend(
+        by_label.values(),
+        by_label.keys(),
+        loc="upper center",
+        ncol=4,
+        labelspacing=0.1,
+        handletextpad=0.1,
+        columnspacing=0.1,
+        fontsize=fontsize - 1,
+        bbox_to_anchor=(0.5, 0.98),
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.90])
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    out_png = os.path.join(OUT_DIR, "sort_vs_no_sort_compare.png")
+    out_eps = os.path.join(OUT_DIR, "sort_vs_no_sort_compare.eps")
+    plt.savefig(out_png, dpi=400, bbox_inches="tight")
+    plt.savefig(out_eps, format="eps", dpi=400, bbox_inches="tight")
+    plt.close()
+
+    print(f"Saved: {out_png}")
+
+
+if __name__ == "__main__":
+    plot_compare_sort()
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -11,26 +354,14 @@ from collections import OrderedDict
 # 定义数据目录和算法映射
 data_dirs = {
     'BP': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_vary_pack_size',
+    'Sort-BP': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_vary_pack_size_sort',
     'Sprintz': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_vary_pack_size',
+    'Sort-Sprintz':'/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_vary_pack_size_sort',
 }
 
 # 数据集映射（根据您之前的定义）
 dataset_mapping = {
-    # 时间序列数据集
-    'City-temp.csv': 'CT',
-    'Wind-Speed.csv': 'WS',
-    'IR-bio-temp.csv': 'IR',
-    'PM10-dust.csv': 'PM10',
-    'Air-pressure.csv': 'AP',
-    'Dew-point-temp.csv': 'DT',
-    'Stocks-UK.csv': 'SUK',
-    'Stocks-USA.csv': 'SUA',
-    'Stocks-DE.csv': 'SDE',
-    'Bitcoin-price.csv': 'BP',
-    'Bird-migration.csv': 'BM',
-    'Cpu-usage_right.csv': 'CPU',
-    'Disk-usage.csv': 'DISK',
-    'Mem-usage.csv': 'MEM',
+
     
     # 非时间序列数据集
     'Food-price.csv': 'FP',
@@ -126,8 +457,12 @@ print("\n平均压缩比:")
 for size, ratio in zip(vector_sizes, avg_compression_ratio['BP']):
     print(f"  Pack size {size}: {ratio:.4f}")
 
+bp_rmq_mean = None
+bp_all_mean = None
+sprintz_rmq_mean = None
+sprintz_all_mean = None
 # 读取camel_ratio.xlsx文件并计算均值
-camel_ratio_path = '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/camel_ratio.xlsx'
+camel_ratio_path = '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/sort_camel_ratio.xlsx'
 if os.path.exists(camel_ratio_path):
     print(f"\n读取camel_ratio.xlsx文件: {camel_ratio_path}")
     camel_df = pd.read_excel(camel_ratio_path)
@@ -167,31 +502,10 @@ if os.path.exists(camel_ratio_path):
         print("未找到BP-RMQ行")
         bp_rmq_mean = None
 
-    # 计算BP-RMQ的均值（只计算有效列）
-    bp_all_row = camel_df[camel_df.iloc[:, 0] == 'BP (All)']
-    if not bp_all_row.empty:
-        # 只取有效列的数据
-        bp_all_values = []
-        for col in valid_columns:
-            if col in bp_all_row.columns:
-                val = bp_all_row[col].iloc[0]
-                if pd.notna(val):  # 只处理非空值
-                    bp_all_values.append(float(val))
 
-        if bp_all_values:
-            bp_all_values = 1 / np.array(bp_all_values)
-            bp_all_mean = np.mean(bp_all_values)
-            print(f"BP-All均值 (基于{len(bp_all_values)}个数据集): {bp_all_mean:.4f}")
-            print(f"具体值: {bp_all_values}")
-        else:
-            print("BP-All行中没有有效数据")
-            bp_all_mean = None
-    else:
-        print("未找到BP-All行")
-        bp_all_mean = None
 
     # 计算 BP (Prune) 的均值（如果存在由 PackSizeMLTrainerAndEvaluator 生成的 learning_evaluation_results.csv）
-    bp_learn_row = camel_df[camel_df.iloc[:, 0] == 'BP (Prune Plus)']
+    bp_learn_row = camel_df[camel_df.iloc[:, 0] == 'Sort-BP (Prune-RMQ)']
     if not bp_learn_row.empty:
         bp_learn_values = []
         for col in valid_columns:
@@ -236,7 +550,7 @@ if os.path.exists(camel_ratio_path):
         sprintz_rmq_mean = None
     
     # 计算Sprintz-RMQ的均值
-    sprintz_all_row = camel_df[camel_df.iloc[:, 0] == 'Sprintz (All)']
+    sprintz_all_row = camel_df[camel_df.iloc[:, 0] == 'Sort-Sprintz (Prune-RMQ)']
     if not sprintz_all_row.empty:
         # 只取有效列的数据
         sprintz_all_values = []
@@ -257,27 +571,7 @@ if os.path.exists(camel_ratio_path):
     else:
         print("未找到Sprintz-All行")
         sprintz_all_mean = None
-    # 计算 Sprintz (Prune) 的均值（如果 camel_ratio 中存在该行）
-    sprintz_prune_row = camel_df[camel_df.iloc[:, 0] == 'Sprintz (Prune Plus)']
-    if not sprintz_prune_row.empty:
-        sprintz_prune_values = []
-        for col in valid_columns:
-            if col in sprintz_prune_row.columns:
-                val = sprintz_prune_row[col].iloc[0]
-                if pd.notna(val):
-                    sprintz_prune_values.append(float(val))
-
-        if sprintz_prune_values:
-            sprintz_prune_values = 1 / np.array(sprintz_prune_values)
-            sprintz_prune_mean = np.mean(sprintz_prune_values)
-            print(f"Sprintz-Prune均值 (基于{len(sprintz_prune_values)}个数据集): {sprintz_prune_mean:.4f}")
-            print(f"具体值: {sprintz_prune_values}")
-        else:
-            print("Sprintz-Prune行中没有有效数据")
-            sprintz_prune_mean = None
-    else:
-        print("未找到Sprintz-Prune行")
-        sprintz_prune_mean = None
+    
 else:
     print(f"\ncamel_ratio.xlsx文件不存在: {camel_ratio_path}")
     bp_rmq_mean = None
@@ -286,18 +580,18 @@ else:
     sprintz_all_mean = None
 
 # 读取编码和解码吞吐率数据
-camel_encode_path = '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/compression_time.xlsx'
-camel_decode_path = '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/decompression_time.xlsx'
+camel_encode_path = '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/sort_compression_time.xlsx'
+camel_decode_path = '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/sort_decompression_time.xlsx'
 
 # 初始化编码和解码吞吐率均值
 bp_rmq_encode_mean = None
-sprintz_rmq_encode_mean = None
 bp_rmq_decode_mean = None
+sprintz_rmq_encode_mean = None
 sprintz_rmq_decode_mean = None
-bp_learn_encode_mean = None
-bp_learn_decode_mean = None
-sprintz_prune_encode_mean = None
-sprintz_prune_decode_mean = None
+bp_all_encode_mean = None
+bp_all_decode_mean = None
+sprintz_all_encode_mean = None
+sprintz_all_decode_mean = None
 
 # 读取编码吞吐率数据
 if os.path.exists(camel_encode_path):
@@ -332,7 +626,7 @@ if os.path.exists(camel_encode_path):
         print("未找到BP-RMQ的编码吞吐率行")
     
     # 计算BP-All的编码吞吐率均值
-    bp_all_encode_row = encode_df[encode_df.iloc[:, 0] == 'BP (All)']
+    bp_all_encode_row = encode_df[encode_df.iloc[:, 0] == 'Sort-BP (Prune-RMQ)']
     if not bp_all_encode_row.empty:
         bp_all_encode_values = []
         for col in valid_columns:
@@ -349,22 +643,7 @@ if os.path.exists(camel_encode_path):
     else:
         print("未找到BP-All的编码吞吐率行")
 
-    # 读取 BP (Prune) 的编码吞吐率（如果 camel_encode 中有该行）
-    bp_learn_encode_row = encode_df[encode_df.iloc[:, 0] == 'BP (Prune Plus)']
-    if not bp_learn_encode_row.empty:
-        bp_learn_encode_values = []
-        for col in valid_columns:
-            if col in bp_learn_encode_row.columns:
-                val = bp_learn_encode_row[col].iloc[0]
-                if pd.notna(val):
-                    bp_learn_encode_values.append(1/(float(val)/8000))
-        if bp_learn_encode_values:
-            bp_learn_encode_mean = np.mean(bp_learn_encode_values)
-            print(f"BP-Learn编码吞吐率均值 (基于{len(bp_learn_encode_values)}个数据集): {bp_learn_encode_mean:.2f} MB/s")
-        else:
-            print("BP-Learn行中没有有效的编码吞吐率数据")
-    else:
-        print("未找到BP-Learn的编码吞吐率行")
+
     
     # 计算Sprintz-RMQ的编码吞吐率均值
     sprintz_rmq_encode_row = encode_df[encode_df.iloc[:, 0] == 'Sprintz (RMQ)']
@@ -385,7 +664,7 @@ if os.path.exists(camel_encode_path):
         print("未找到Sprintz-RMQ的编码吞吐率行")
 
     # 计算Sprintz-All的编码吞吐率均值
-    sprintz_all_encode_row = encode_df[encode_df.iloc[:, 0] == 'Sprintz (All)']
+    sprintz_all_encode_row = encode_df[encode_df.iloc[:, 0] == 'Sort-Sprintz (Prune-RMQ)']
     if not sprintz_all_encode_row.empty:
         sprintz_all_encode_values = []
         for col in valid_columns:
@@ -402,23 +681,6 @@ if os.path.exists(camel_encode_path):
     else:
         print("未找到Sprintz-All的编码吞吐率行")
 
-    # 读取 Sprintz (Prune) 的编码吞吐率（如果 camel_encode 中有该行）
-    sprintz_prune_encode_row = encode_df[encode_df.iloc[:, 0] == 'Sprintz (Prune Plus)']
-    if not sprintz_prune_encode_row.empty:
-        sprintz_prune_encode_values = []
-        for col in valid_columns:
-            if col in sprintz_prune_encode_row.columns:
-                val = sprintz_prune_encode_row[col].iloc[0]
-                if pd.notna(val):
-                    sprintz_prune_encode_values.append(1/(float(val)/8000))
-
-        if sprintz_prune_encode_values:
-            sprintz_prune_encode_mean = np.mean(sprintz_prune_encode_values)
-            print(f"Sprintz-Prune编码吞吐率均值 (基于{len(sprintz_prune_encode_values)}个数据集): {sprintz_prune_encode_mean:.2f} MB/s")
-        else:
-            print("Sprintz-Prune行中没有有效的编码吞吐率数据")
-    else:
-        print("未找到Sprintz-Prune的编码吞吐率行")
 else:
     print(f"\ncamel_encode.xlsx文件不存在: {camel_encode_path}")
 
@@ -455,7 +717,7 @@ if os.path.exists(camel_decode_path):
         print("未找到BP-RMQ的解码吞吐率行")
 
     # 计算BP-All的解码吞吐率均值
-    bp_all_decode_row = decode_df[decode_df.iloc[:, 0] == 'BP (All)']
+    bp_all_decode_row = decode_df[decode_df.iloc[:, 0] == 'Sort-BP (Prune-RMQ)']
     if not bp_all_decode_row.empty:
         bp_all_decode_values = []
         for col in valid_columns:
@@ -472,22 +734,7 @@ if os.path.exists(camel_decode_path):
     else:
         print("未找到BP-All的解码吞吐率行")
 
-    # 读取 BP (learn) 的解码吞吐率
-    bp_learn_decode_row = decode_df[decode_df.iloc[:, 0] == 'BP (Prune Plus)']
-    if not bp_learn_decode_row.empty:
-        bp_learn_decode_values = []
-        for col in valid_columns:
-            if col in bp_learn_decode_row.columns:
-                val = bp_learn_decode_row[col].iloc[0]
-                if pd.notna(val):
-                    bp_learn_decode_values.append(1/(float(val)/8000))
-        if bp_learn_decode_values:
-            bp_learn_decode_mean = np.mean(bp_learn_decode_values)
-            print(f"BP-Learn解码吞吐率均值 (基于{len(bp_learn_decode_values)}个数据集): {bp_learn_decode_mean:.2f} MB/s")
-        else:
-            print("BP-Learn行中没有有效的解码吞吐率数据")
-    else:
-        print("未找到BP-Learn的解码吞吐率行")
+
 
     # 计算Sprintz-RMQ的解码吞吐率均值
     sprintz_rmq_decode_row = decode_df[decode_df.iloc[:, 0] == 'Sprintz (RMQ)']
@@ -508,7 +755,7 @@ if os.path.exists(camel_decode_path):
         print("未找到Sprintz-RMQ的解码吞吐率行")
 
     # 计算Sprintz-All的解码吞吐率均值
-    sprintz_all_decode_row = decode_df[decode_df.iloc[:, 0] == 'Sprintz (All)']
+    sprintz_all_decode_row = decode_df[decode_df.iloc[:, 0] == 'Sort-Sprintz (Prune-RMQ)']
     if not sprintz_all_decode_row.empty:
         sprintz_all_decode_values = []
         for col in valid_columns:
@@ -525,23 +772,6 @@ if os.path.exists(camel_decode_path):
     else:
         print("未找到Sprintz-All的解码吞吐率行")
 
-    # 读取 Sprintz (Prune) 的解码吞吐率（如果 camel_decode 中有该行）
-    sprintz_prune_decode_row = decode_df[decode_df.iloc[:, 0] == 'Sprintz (Prune Plus)']
-    if not sprintz_prune_decode_row.empty:
-        sprintz_prune_decode_values = []
-        for col in valid_columns:
-            if col in sprintz_prune_decode_row.columns:
-                val = sprintz_prune_decode_row[col].iloc[0]
-                if pd.notna(val):
-                    sprintz_prune_decode_values.append(1/(float(val)/8000))
-
-        if sprintz_prune_decode_values:
-            sprintz_prune_decode_mean = np.mean(sprintz_prune_decode_values)
-            print(f"Sprintz-Prune解码吞吐率均值 (基于{len(sprintz_prune_decode_values)}个数据集): {sprintz_prune_decode_mean:.2f} MB/s")
-        else:
-            print("Sprintz-Prune行中没有有效的解码吞吐率数据")
-    else:
-        print("未找到Sprintz-Prune的解码吞吐率行")
 
 else:
     print(f"\ncamel_decode.xlsx文件不存在: {camel_decode_path}")
@@ -604,20 +834,27 @@ parallelogram = mpath.Path(parallelogram_vertices)
 # 定义8种不同的标记
 markers = ['o', '^', parallelogram, heart, 's', 'v', trapezoid, heart_parametric]
 
-# 算法顺序（包含 RMQ / All）
-algorithm_order = ['BP', 'BP (RMQ)', 'BP (All)', 'Sprintz', 'Sprintz (RMQ)', 'Sprintz (All)']
+# 算法顺序（8 个算法）
+algorithm_order = [
+    'BP',
+    'BP (Prune-RMQ)',
+    'Sort-BP',
+    'Sort-BP (Prune-RMQ)',
+    'Sprintz',
+    'Sort-Sprintz',
+    'Sprintz (RMQ)',
+    'Sort-Sprintz (Prune-RMQ)',
+]
 
-# 设置颜色映射（同色分组）
+# 设置颜色映射（与 fig_vary_pack_size.py 一致）
 algorithm_palette = {
-    'BP': '#ff7f0e',        # BP (orange)
-    # 'BP (RMQ)': '#d62728',  # BP (RMQ) (red)
-    'BP (All)': '#9467bd',  # BP (All) (purple)
-    'Sprintz': '#2ca02c',        # Sprintz (green)
-    # 'Sprintz (RMQ)': '#17becf',  # Sprintz (RMQ) (cyan)
-    'Sprintz (All)': '#8c564b',  # Sprintz (All) (brown)
+    'BP': '#1f77b4',          # BP (blue)，同 fig_vary_pack_size
+    'Sort-BP': '#9467bd',     # 对应 BP (All) 线色
+    'Sprintz': '#9467bd',     # Sprintz (purple)，同 fig_vary_pack_size
+    'Sort-Sprintz': '#8c564b' # Sprintz (All) (brown)，同 fig_vary_pack_size
 }
 
-# 创建2x3子图：第一行为BP家族，第二行为Sprintz家族
+# 创建2x3子图：第一列为BP家族，第二列为Sprintz家族
 fig, axs = plt.subplots(3, 2, figsize=(9, 13))
 plt.subplots_adjust(wspace=0.45, hspace=0.35)
 
@@ -626,50 +863,86 @@ fontsize = 18
 exponents = [int(np.log2(ps)) for ps in vector_sizes]
 exponent_labels = [f'$2^{{{exp}}}$' for exp in exponents]
 plt.rcParams.update({'font.size': fontsize})
-# 定义每一行的算法组
-bp_group = ['BP'] #, 'BP (RMQ)', 'BP (All)'
-sprintz_group = ['Sprintz'] #, 'Sprintz (RMQ)', 'Sprintz (All)'
 
-# 顶部行：BP 家族
+# 每列的算法组（只包含随 pack size 变化的 4 个算法）
+bp_group = ['BP', 'Sort-BP']
+sprintz_group = ['Sprintz', 'Sort-Sprintz']
+
+# 顶部行：Compression Ratio，左列 BP 家族
 ax1 = axs[0, 0]
 for i, algorithm in enumerate(bp_group):
     data = df_compression_ratio_reset[df_compression_ratio_reset['Algorithm'] == algorithm]
-    linestyle = '-' if 'All' in algorithm or 'RMQ' not in algorithm else '--'
-    ax1.plot(data['Pack Size'], data['Compression Ratio'],
-             color=algorithm_palette[algorithm], linestyle=linestyle, marker=markers[i],
-             markersize=7, linewidth=2.2, label=algorithm)
-# 添加BP的 RMQ/All 平均值（来自 camel_ratio.xlsx）
+    ax1.plot(
+        data['Pack Size'],
+        data['Compression Ratio'],
+        color=algorithm_palette[algorithm],
+        linestyle='-',
+        marker=markers[i],
+        markersize=7,
+        linewidth=2.2,
+        label=algorithm,
+    )
 
-if bp_all_mean is not None:
-    ax1.axhline(y=bp_all_mean, color='#9467bd', linestyle='--', linewidth=1.8, label='BP-All')
-if bp_learn_mean is not None:
-    ax1.axhline(y=bp_learn_mean, color='#1f77b4', linestyle='-.', linewidth=1.8, label='BP-Prune')
+# BP 相关 RMQ 水平虚线
 if bp_rmq_mean is not None:
-    ax1.axhline(y=bp_rmq_mean, color='#d62728', linestyle='--', linewidth=1.8, label='BP-Prune-RMQ')
+    ax1.axhline(
+        y=bp_rmq_mean,
+        color='#d62728',
+        linestyle='--',
+        linewidth=1.8,
+        label='BP (Prune-RMQ)',
+    )
+if bp_learn_mean is not None:
+    ax1.axhline(
+        y=bp_learn_mean,
+        color='#2ca02c',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sort-BP (Prune-RMQ)',
+    )
+
 ax1.set_xscale('log', base=2)
 ax1.set_ylabel('Compression Ratio', fontsize=fontsize)
 ax1.set_xlabel(r'Pack Size $s$', fontsize=fontsize)
-ax1.set_title('(a) BP: Compression Ratio', fontsize=fontsize,x=0.4)
+ax1.set_title('(a) BP: Compression Ratio', fontsize=fontsize, x=0.4)
 ax1.set_xticks(vector_sizes)
 ax1.set_xticklabels(exponent_labels)
 ax1.tick_params(labelsize=fontsize)
 
+# 中间行：Encoding Time，左列 BP 家族
 ax2 = axs[1, 0]
 for i, algorithm in enumerate(bp_group):
     data = df_encode_time_reset[df_encode_time_reset['Algorithm'] == algorithm]
-    linestyle = '-' if 'All' in algorithm or 'RMQ' not in algorithm else '--'
-    ax2.plot(data['Pack Size'], data['Encoding Time (MB/s)'],
-             color=algorithm_palette[algorithm], linestyle=linestyle, marker=markers[i],
-             markersize=7, linewidth=2.2, label=algorithm)
-if bp_all_encode_mean is not None:
-    ax2.axhline(y=bp_all_encode_mean, color='#9467bd',linestyle='--',  linewidth=1.8, label='BP-All')
-if bp_learn_encode_mean is not None:
-    ax2.axhline(y=bp_learn_encode_mean, color='#1f77b4', linestyle='-.', linewidth=1.8, label='BP-Prune')
+    ax2.plot(
+        data['Pack Size'],
+        data['Encoding Time (MB/s)'],
+        color=algorithm_palette[algorithm],
+        linestyle='-',
+        marker=markers[i],
+        markersize=7,
+        linewidth=2.2,
+        label=algorithm,
+    )
+
 if bp_rmq_encode_mean is not None:
-    ax2.axhline(y=bp_rmq_encode_mean, color='#d62728',linestyle='--',  linewidth=1.8, label='BP-Prune-RMQ')
+    ax2.axhline(
+        y=bp_rmq_encode_mean,
+        color='#d62728',
+        linestyle='--',
+        linewidth=1.8,
+        label='BP (Prune-RMQ)',
+    )
+if bp_all_encode_mean is not None:
+    ax2.axhline(
+        y=bp_all_encode_mean,
+        color='#2ca02c',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sort-BP (Prune-RMQ)',
+    )
+
 ax2.set_xscale('log', base=2)
-# ax2.set_yscale('log')
-ax2.set_ylim(0,1210)
+ax2.set_ylim(0, 120)
 ax2.set_ylabel('Time (ns/point)', fontsize=fontsize)
 ax2.set_xlabel(r'Pack Size $s$', fontsize=fontsize)
 ax2.set_title('(c) BP: Compression Time', fontsize=fontsize, x=0.4)
@@ -677,22 +950,40 @@ ax2.set_xticks(vector_sizes)
 ax2.set_xticklabels(exponent_labels)
 ax2.tick_params(labelsize=fontsize)
 
+# 底部行：Decoding Time，左列 BP 家族
 ax3 = axs[2, 0]
 for i, algorithm in enumerate(bp_group):
     data = df_decode_time_reset[df_decode_time_reset['Algorithm'] == algorithm]
-    linestyle = '-' if 'All' in algorithm or 'RMQ' not in algorithm else '--'
-    ax3.plot(data['Pack Size'], data['Decoding Time (MB/s)'],
-             color=algorithm_palette[algorithm], linestyle=linestyle, marker=markers[i],
-             markersize=7, linewidth=2.2, label=algorithm)
-if bp_all_decode_mean is not None:
-    ax3.axhline(y=bp_all_decode_mean, color='#9467bd', linestyle='--', linewidth=1.8, label='BP-All')
-if bp_learn_decode_mean is not None:
-    ax3.axhline(y=bp_learn_decode_mean, color='#1f77b4', linestyle='-.', linewidth=1.8, label='BP-Prune')
+    ax3.plot(
+        data['Pack Size'],
+        data['Decoding Time (MB/s)'],
+        color=algorithm_palette[algorithm],
+        linestyle='-',
+        marker=markers[i],
+        markersize=7,
+        linewidth=2.2,
+        label=algorithm,
+    )
+
 if bp_rmq_decode_mean is not None:
-    ax3.axhline(y=bp_rmq_decode_mean, color='#d62728', linestyle='--', linewidth=1.8, label='BP-Prune-RMQ')
+    ax3.axhline(
+        y=bp_rmq_decode_mean,
+        color='#d62728',
+        linestyle='--',
+        linewidth=1.8,
+        label='BP (Prune-RMQ)',
+    )
+if bp_all_decode_mean is not None:
+    ax3.axhline(
+        y=bp_all_decode_mean,
+        color='#2ca02c',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sort-BP (Prune-RMQ)',
+    )
+
 ax3.set_xscale('log', base=2)
-# ax3.set_yscale('log')
-ax3.set_ylim(0,1210)
+ax3.set_ylim(0, 120)
 ax3.set_ylabel('Time (ns/point)', fontsize=fontsize)
 ax3.set_xlabel(r'Pack Size $s$', fontsize=fontsize)
 ax3.set_title('(e) BP: Decompression Time', fontsize=fontsize, x=0.4)
@@ -700,71 +991,125 @@ ax3.set_xticks(vector_sizes)
 ax3.set_xticklabels(exponent_labels)
 ax3.tick_params(labelsize=fontsize)
 
-# 底部行：Sprintz 家族
+# 顶部行：Compression Ratio，右列 Sprintz 家族
 ax4 = axs[0, 1]
 for i, algorithm in enumerate(sprintz_group):
     data = df_compression_ratio_reset[df_compression_ratio_reset['Algorithm'] == algorithm]
-    linestyle = '-' if 'All' in algorithm or 'RMQ' not in algorithm else '--'
-    ax4.plot(data['Pack Size'], data['Compression Ratio'],
-             color=algorithm_palette[algorithm], linestyle=linestyle, marker=markers[i+3],
-             markersize=7, linewidth=2.2, label=algorithm)
-if sprintz_all_mean is not None:
-    ax4.axhline(y=sprintz_all_mean, color='#8c564b', linestyle='--', linewidth=1.8, label='Sprintz-All')
-if 'sprintz_prune_mean' in globals() and sprintz_prune_mean is not None:
-    ax4.axhline(y=sprintz_prune_mean, color='#1f77b4', linestyle='-.', linewidth=1.8, label='Sprintz-Prune')
+    ax4.plot(
+        data['Pack Size'],
+        data['Compression Ratio'],
+        color=algorithm_palette[algorithm],
+        linestyle='-',
+        marker=markers[i + 4],
+        markersize=7,
+        linewidth=2.2,
+        label=algorithm,
+    )
+
+# Sprintz 相关 RMQ 水平虚线
 if sprintz_rmq_mean is not None:
-    ax4.axhline(y=sprintz_rmq_mean, color='#17becf', linestyle='--', linewidth=1.8, label='Sprintz-Prune-RMQ')
+    ax4.axhline(
+        y=sprintz_rmq_mean,
+        color='#17becf',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sprintz (Prune-RMQ)',
+    )
+if sprintz_all_mean is not None:
+    ax4.axhline(
+        y=sprintz_all_mean,
+        color='#8c564b',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sort-Sprintz (Prune-RMQ)',
+    )
+
 ax4.set_xscale('log', base=2)
 ax4.set_ylabel('Compression Ratio', fontsize=fontsize)
 ax4.set_xlabel(r'Pack Size $s$', fontsize=fontsize)
-ax4.set_title('(b) Sprintz: Compression Ratio', fontsize=fontsize,x=0.34)
+ax4.set_title('(b) Sprintz: Compression Ratio', fontsize=fontsize, x=0.34)
 ax4.set_xticks(vector_sizes)
 ax4.set_xticklabels(exponent_labels)
 ax4.tick_params(labelsize=fontsize)
 
+# 中间行：Encoding Time，右列 Sprintz 家族
 ax5 = axs[1, 1]
 for i, algorithm in enumerate(sprintz_group):
     data = df_encode_time_reset[df_encode_time_reset['Algorithm'] == algorithm]
-    linestyle = '-' if 'All' in algorithm or 'RMQ' not in algorithm else '--'
-    ax5.plot(data['Pack Size'], data['Encoding Time (MB/s)'],
-             color=algorithm_palette[algorithm], linestyle=linestyle, marker=markers[i+3],
-             markersize=7, linewidth=2.2, label=algorithm)
-if sprintz_all_encode_mean is not None:
-    ax5.axhline(y=sprintz_all_encode_mean, color='#8c564b', linestyle='--', linewidth=1.8, label='Sprintz-All')
-if 'sprintz_prune_encode_mean' in globals() and sprintz_prune_encode_mean is not None:
-    ax5.axhline(y=sprintz_prune_encode_mean, color='#1f77b4', linestyle='-.', linewidth=1.8, label='Sprintz-Prune')
+    ax5.plot(
+        data['Pack Size'],
+        data['Encoding Time (MB/s)'],
+        color=algorithm_palette[algorithm],
+        linestyle='-',
+        marker=markers[i + 4],
+        markersize=7,
+        linewidth=2.2,
+        label=algorithm,
+    )
+
 if sprintz_rmq_encode_mean is not None:
-    ax5.axhline(y=sprintz_rmq_encode_mean, color='#17becf', linestyle='--', linewidth=1.8, label='Sprintz-Prune-RMQ')
+    ax5.axhline(
+        y=sprintz_rmq_encode_mean,
+        color='#17becf',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sprintz (Prune-RMQ)',
+    )
+if sprintz_all_encode_mean is not None:
+    ax5.axhline(
+        y=sprintz_all_encode_mean,
+        color='#8c564b',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sort-Sprintz (Prune-RMQ)',
+    )
 
 ax5.set_xscale('log', base=2)
-# ax5.set_yscale('log')
-ax5.set_ylim(0,1210)
+ax5.set_ylim(0, 120)
 ax5.set_ylabel('Time (ns/point)', fontsize=fontsize)
 ax5.set_xlabel(r'Pack Size $s$', fontsize=fontsize)
-ax5.set_title('(d) Sprintz: Compression Time', fontsize=fontsize,x=0.34)
+ax5.set_title('(d) Sprintz: Compression Time', fontsize=fontsize, x=0.34)
 ax5.set_xticks(vector_sizes)
 ax5.set_xticklabels(exponent_labels)
 ax5.tick_params(labelsize=fontsize)
 
+# 底部行：Decoding Time，右列 Sprintz 家族
 ax6 = axs[2, 1]
 for i, algorithm in enumerate(sprintz_group):
     data = df_decode_time_reset[df_decode_time_reset['Algorithm'] == algorithm]
-    linestyle = '-' if 'All' in algorithm or 'RMQ' not in algorithm else '--'
-    ax6.plot(data['Pack Size'], data['Decoding Time (MB/s)'],
-             color=algorithm_palette[algorithm], linestyle=linestyle, marker=markers[i+3],
-             markersize=7, linewidth=2.2, label=algorithm)
-if sprintz_all_decode_mean is not None:
-    ax6.axhline(y=sprintz_all_decode_mean, color='#8c564b', linestyle='--', linewidth=1.8, label='Sprintz-All')
-if 'sprintz_prune_decode_mean' in globals() and sprintz_prune_decode_mean is not None:
-    ax6.axhline(y=sprintz_prune_decode_mean, color='#1f77b4', linestyle='-.', linewidth=1.8, label='Sprintz-Prune')
+    ax6.plot(
+        data['Pack Size'],
+        data['Decoding Time (MB/s)'],
+        color=algorithm_palette[algorithm],
+        linestyle='-',
+        marker=markers[i + 4],
+        markersize=7,
+        linewidth=2.2,
+        label=algorithm,
+    )
+
 if sprintz_rmq_decode_mean is not None:
-    ax6.axhline(y=sprintz_rmq_decode_mean, color='#17becf', linestyle='--', linewidth=1.8, label='Sprintz-Prune-RMQ')
+    ax6.axhline(
+        y=sprintz_rmq_decode_mean,
+        color='#17becf',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sprintz (Prune-RMQ)',
+    )
+if sprintz_all_decode_mean is not None:
+    ax6.axhline(
+        y=sprintz_all_decode_mean,
+        color='#8c564b',
+        linestyle='--',
+        linewidth=1.8,
+        label='Sort-Sprintz (Prune-RMQ)',
+    )
+
 ax6.set_xscale('log', base=2)
-# ax6.set_yscale('log')
-ax6.set_ylim(0,1210)
+ax6.set_ylim(0, 120)
 ax6.set_ylabel('Time (ns/point)', fontsize=fontsize)
 ax6.set_xlabel(r'Pack Size $s$', fontsize=fontsize)
-ax6.set_title('(f) Sprintz: Decompression Time', fontsize=fontsize,x=0.33)
+ax6.set_title('(f) Sprintz: Decompression Time', fontsize=fontsize, x=0.33)
 ax6.set_xticks(vector_sizes)
 ax6.set_xticklabels(exponent_labels)
 ax6.tick_params(labelsize=fontsize)
@@ -781,11 +1126,11 @@ for ax_row in axs:
         all_labels.extend(l)
 
 by_label = OrderedDict(zip(all_labels, all_handles))
-fig.legend(by_label.values(), by_label.keys(), loc='upper center', ncol=4,
+fig.legend(by_label.values(), by_label.keys(), loc='upper center', ncol=2,
            labelspacing=0.1,
             handletextpad=0.1,
             columnspacing=0.1,
-           fontsize=fontsize-1, bbox_to_anchor=(0.45, 0.98))
+           fontsize=fontsize-1, bbox_to_anchor=(0.5, 1.02))
 
 # 为图例在顶部留出空间，然后紧凑布局子图
 # plt.tight_layout(rect=[0, 0, 1, 0.92])
@@ -794,22 +1139,6 @@ fig.legend(by_label.values(), by_label.keys(), loc='upper center', ncol=4,
 output_dir = "/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/figure_for_paper"
 os.makedirs(output_dir, exist_ok=True)
 
-plt.savefig(os.path.join(output_dir, 'bp_vary_pack_size.png'), dpi=400, bbox_inches='tight')
-plt.savefig(os.path.join(output_dir, 'bp_vary_pack_size.eps'), format='eps', dpi=400, bbox_inches='tight')
+plt.savefig(os.path.join(output_dir, 'sort_bp_vary_pack_size.png'), dpi=400, bbox_inches='tight')
+plt.savefig(os.path.join(output_dir, 'sort_bp_vary_pack_size.eps'), format='eps', dpi=400, bbox_inches='tight')
 #legend改为正上方
-
-
-# 显示图形
-# plt.show()
-
-# 创建更详细的统计信息表格
-print("\n详细统计信息:")
-print("="*70)
-print(f"{'Pack Size':>10} {'Compression Ratio':>20} {'Encode Throughput':>20} {'Decode Throughput':>20}")
-print("-"*70)
-
-for i, size in enumerate(vector_sizes):
-    ratio = avg_compression_ratio['BP'][i]
-    encode_tp = avg_encode_time['BP'][i]
-    decode_tp = avg_decode_time['BP'][i]
-    print(f"{size:>10} {ratio:>20.4f} {encode_tp:>20.2f} {decode_tp:>20.2f}")
