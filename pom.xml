@@ -69,6 +69,7 @@
             <include>**/FloatToInteger.java</include>
             <include>**/OptimizePackSizeVaryPageSize.java</include>
             <include>**/OptimizePackSizeVaryPackSize.java</include>
+            <include>**/Baseline.java</include>
           </includes>
         </configuration>
       </plugin>

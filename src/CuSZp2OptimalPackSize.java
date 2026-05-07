@@ -24,7 +24,7 @@ import java.util.zip.DataFormatException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class CuSZpCpuTest {
+public class CuSZp2OptimalPackSize {
 
   private static final Set<String> IGNORE_FILES = Collections.emptySet();
   private static final int CHUNK_SIZE = 8192;
@@ -270,7 +270,7 @@ public class CuSZpCpuTest {
   }
 
   @Test
-  public void cuSZpCpu1DTest() throws Exception {
+  public void CuSZp2() throws Exception {
     System.out.println("\nCPU cuSZp-like plain-mode Performance Testing...");
     String directory = resolveDataDir().getAbsolutePath();
     String outputDirstr = new File(resolveOutputBaseDir(), "output_cuszp_cpu").getAbsolutePath();
@@ -366,7 +366,7 @@ public class CuSZpCpuTest {
   }
 
   @Test
-  public void cuSZpCpu1DOptimalV5Test() throws Exception {
+  public void CuSZp2PruneRMQ() throws Exception {
     System.out.println("\nCPU cuSZp-like plain-mode (optimal pack V5 per chunk)...");
     String directory = resolveDataDir().getAbsolutePath();
     String outputDirstr =

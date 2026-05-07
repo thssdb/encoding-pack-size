@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class ALPTest {
+public class ALPOptimalPackSize {
 
   private static final int ALP_OPTIMAL_V5_FORMAT_MAGIC = 0x41355635;
 
@@ -824,7 +824,7 @@ public class ALPTest {
   }
 
   @Test
-  public void test0() throws IOException {
+  public void ALP() throws IOException {
 
     String parent_dir = "/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/";
     String input_parent_dir = parent_dir + "ElfTestData_camel/";
@@ -934,7 +934,7 @@ public class ALPTest {
   }
 
   @Test
-  public void test1_optimalPackV5() throws IOException {
+  public void ALPPruneRMQ() throws IOException {
     String parent_dir = "/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/";
     String input_parent_dir = parent_dir + "ElfTestData_camel/";
     String output_parent_dir = parent_dir + "output_ALP_optimal_v5/";
