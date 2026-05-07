@@ -1,0 +1,6 @@
+# Python plotting stack (see README §3.1). Requires Python 3.9+.
+pandas>=2.0,<3
+matplotlib>=3.7,<4
+numpy>=1.24,<3
+scipy>=1.10,<2
+openpyxl>=3.1,<4

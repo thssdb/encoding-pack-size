@@ -1,0 +1,6 @@
+# Optional: install https://mise.jdx.dev/ then run `mise install` in this repo
+# to put Python 3.11 + JDK 17 on PATH (typical for TsFile / Maven in §3.2).
+
+[tools]
+python = "3.11"
+java = "17"

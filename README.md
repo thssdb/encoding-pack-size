@@ -3,7 +3,7 @@
 Artifacts and Python tooling for the **pack-size optimization** experiments reported in the paper. 
 This repository is intended to make **figure reproduction** and **inspection of tabulated metrics** straightforward.
 
-**Fastest path:** **§3 → Quick path**, then **§4 → Quick lookup** (copy-paste **Commands** there; use the table below for tests and notes).
+**Fastest path:** **§3 → Quick path**, then **§4 → Quick lookup of script** (copy-paste **Commands** there; use the table below for tests and notes).
 
 ---
 
@@ -42,24 +42,48 @@ Commit hash: 0157b8a4dc7ada165106d231e9170d629ad80853
 
 Do steps **in this order**; the only figure-specific part is **§4**.
 
-1. **One-time setup** — **§3.1** (Python venv, clone this repo and **tsfile**).
-2. **Find your figure** — open **§4 → Quick lookup**, use the **Commands** column for copy-paste steps; open the **detailed table** below for Java test names and notes.
-3. **Generate inputs (Java)** — run the numbered **`mvn test …`** lines in **Quick lookup** (from the **tsfile** tree; see **§3.2** for a generic build example). Skip `mvn` if that figure’s commands are Python-only (e.g. Figures 19–20).
-4. **Plot (Python)** — `cd` into **encoding-pack-size**, activate the venv, run the **`python …`** lines from the same row. Figures usually write to `./figure_for_paper/` (see **§3.3**).
+1. **One-time setup** — **§3.1** (`./scripts/bootstrap_env.sh` or manual steps: Python venv, **`requirements.txt`**, clone **tsfile**).
+2. **Find your figure** — open **§4 → Quick lookup of script**, use the **Commands** column for copy-paste steps; open the **detailed table** below for Java test names and notes.
+3. **Generate inputs (Java)** — run the numbered **`mvn test …`** lines in **Quick lookup of script** (from the **tsfile** tree; see **§3.2** for a generic build example). Skip `mvn` if that figure’s commands are Python-only (e.g. Figures 19–20).
+4. **Plot (Python)** — `cd` into **encoding-pack-size**, activate the venv, run the **`python3 …`** lines from the same row. Figures usually write to `./figure_for_paper/` (see **§3.3**).
 
-`{basedir}` is the root of this **encoding-pack-size** checkout: run `python fig*.py` from `cd {basedir}`. After **§3.1**, that directory usually also contains `tsfile/`; if **tsfile** lives elsewhere, set `{basedir}` to the folder that contains your `tsfile` tree and run the Python steps from your actual script checkout.
+`{basedir}` is the root of this **encoding-pack-size** checkout: run `python3 fig*.py` from `cd {basedir}`. After **§3.1**, that directory usually also contains `tsfile/`; if **tsfile** lives elsewhere, set `{basedir}` to the folder that contains your `tsfile` tree and run the Python steps from your actual script checkout.
 
 ### 3.1 Environment
 
-Use Python 3.9+. Install dependencies and clone repositories:
+Use **Python 3.9 or newer**; the commands below call the interpreter as **`python3`** (on some Windows installs, use **`py -3`** in the same places). This repo pins **Python 3.11** in **`mise.toml`** / **`.python-version`** for reproducibility; older 3.9+ interpreters still work if you create the venv manually.
+
+**Declared versions (config files)**
+
+| Role | File | Purpose |
+|------|------|---------|
+| Python packages | **`requirements.txt`** | `pip install -r requirements.txt` inside the venv |
+| Python + JDK (optional) | **`mise.toml`** | If you use [mise](https://mise.jdx.dev/), run **`mise install`** in this repo, then open a new shell |
+| Python for pyenv | **`.python-version`** | `pyenv` picks 3.11 when you `cd` here |
+
+**Clone Repository**
 
 ```bash
 git clone https://github.com/thssdb/encoding-pack-size.git
 cd encoding-pack-size
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install pandas matplotlib numpy scipy openpyxl
 git clone -b research/encoding-pack-size --single-branch https://github.com/apache/tsfile/
+```
+
+
+**One-command setup**
+
+```bash
+./scripts/bootstrap_env.sh
+```
+
+This creates **`.venv`**, installs dependencies from **`requirements.txt`**, and clones **`tsfile/`** on the `research/encoding-pack-size` branch if missing. It does **not** install the JDK or Maven; install **JDK 17** (or 11+) and **Maven 3.6+** yourself (or via **`mise install`** using **`mise.toml`**), then use **§3.2**.
+
+**Manual setup (equivalent steps)**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
 After this, your `{basedir}` is typically the `encoding-pack-size` directory (it now contains a `tsfile/` subfolder). If you clone **tsfile** as a sibling of `encoding-pack-size`, `{basedir}` is their common parent instead.
@@ -74,7 +98,7 @@ mvn install -pl org.apache.tsfile:tsfile-java,org.apache.tsfile:common -DskipTes
 mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizePruneRMQTest'
 ```
 
-For each figure, use the exact **`mvn test -pl org.apache.tsfile:tsfile '-Dtest=…'`** lines in **§4 → Quick lookup** (from `cd {basedir}/tsfile/java`). Join methods on the same class with `+`; separate classes with `,` (see [Maven Surefire](https://maven.apache.org/surefire/maven-surefire-plugin/examples/single-test.html)).
+For each figure, use the exact **`mvn test -pl org.apache.tsfile:tsfile '-Dtest=…'`** lines in **§4 → Quick lookup of script** (from `cd {basedir}/tsfile/java`). Join methods on the same class with `+`; separate classes with `,` (see [Maven Surefire](https://maven.apache.org/surefire/maven-surefire-plugin/examples/single-test.html)).
 
 ### 3.3 Figures (plotting)
 
@@ -83,34 +107,34 @@ From the **encoding-pack-size** root, with the venv activated:
 ```bash
 cd {basedir}
 source .venv/bin/activate   # if not already active
-python <script-from-section-4>.py
+python3 <script-from-section-4>.py
 ```
 
-Use the **`python …`** step(s) in **§4 → Quick lookup** for your figure. Path edits and data prerequisites are in the **Note** column of the detailed table. Outputs are usually under `./figure_for_paper/` as PNG/EPS.
+Use the **`python3 …`** step(s) in **§4 → Quick lookup of script** for your figure. Path edits and data prerequisites are in the **Note** column of the detailed table. Outputs are usually under `./figure_for_paper/` as PNG/EPS.
 
 ---
 
 ## 4. Figure <-> script and test functions mapping
 
-### Quick lookup
+### Quick lookup of script
 
-| Figure | Script(s) | Commands (run in order) |
-|--------|-----------|-------------------------|
-| 2 | `fig2_draw_run_lengths.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#FeatureTest+FeatureAfterSprintzTest'`<br>2. `cd {basedir} && python fig2_draw_run_lengths.py` |
-| 3–4 | `fig3_cost_vary_pack_size.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#testPackSizeCostAnalysis'`<br>2. `cd {basedir} && python fig3_cost_vary_pack_size.py` (edit `csv_dir` / `output_dir` in `if __name__ == '__main__'` if needed; one run produces both Fig. 3 and Fig. 4 outputs.) |
-| 11 | `fig11_data_characters_predict.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizePruneRMQFeatureOutputTest'`<br>2. `cd {basedir} && python fig11_data_characters_predict.py` |
-| 12 | `fig12_improve_compare_ratio.py`, then `fig_combine_results.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#BPTest+OptimizePackSizePruneRMQTest+OptimizePackSizePruneRMQSprintzTest+SprintzTest'`<br>2. `cd {basedir} && python fig12_improve_compare_ratio.py`<br>3. `cd {basedir} && python fig_combine_results.py` |
-| 13 | `fig13_alp_cuszp_pack8_vs_v5_combined.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=ALPTest#test0+test1_optimalPackV5,CuSZpCpuTest#cuSZpCpu1DTest+cuSZpCpu1DOptimalV5Test'`<br>2. `cd {basedir} && python fig13_alp_cuszp_pack8_vs_v5_combined.py` |
-| 14 | `fig14_compare_baseline.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#BPTest+Simple8bTest+OptimizePackSizePruneRMQTest,HBPIndexLongTest#test0'`<br>2. In **SElfStar**: `mvn test -Dtest=TestCompressorPacksize#testAllCompressor` (see Note below)<br>3. `cd {basedir} && python fig14_compare_baseline.py` |
-| 15 | `fig15_vary_pack_size.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizePruneRMQTest+OptimizePackSizePrunePlusTest+OptimizePackSizeRMQSprintzTest+OptimizePackSizeN2SprintzTest+OptimizePackSizePrunePlusSprintzTest+VaryPackSizeTest+VaryPackSizeSprintzTest'`<br>2. `cd {basedir} && python fig15_vary_pack_size.py` |
-| 16 | `fig16_vary_page_size.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#TestVariablePageSizeBP+TestVariablePageSizeSprintz+TestVariablePageSizeBPN2+TestVariablePageSizeSprintzN2+TestVariablePageSizeBPonlyPrune+TestVariablePageSizeSprintzonlyPrune+TestVariablePageSizeBPPruneRMQ+TestVariablePageSizeSprintzPruneRMQ+VaryPageSizeOptimizePackSizeFiltersPlusTest+VaryPageSizeOptimizePackSizeFiltersPlusSprintzTest'`<br>2. `cd {basedir} && python fig16_vary_page_size.py` |
-| 17 | `fig17_vary_pack_size_sort.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#VaryPackSizeTest+VaryPackSizeSortTest+VaryPackSizeSprintzTest+VaryPackSizeSprintzSortTest'`<br>2. `cd {basedir} && python fig17_vary_pack_size_sort.py` |
-| 18 | `fig18_vary_pack_size_candidate_limited.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizePruneRMQLimitedTest+OptimizePackSizePruneRMQTest'`<br>2. `cd {basedir} && python fig18_vary_pack_size_candidate_limited.py` |
-| 19 | `fig19_simd.py` | 1. `cd {basedir} && python fig19_simd.py` |
-| 20 | `fig20_system.py` | 1. `cd {basedir} && python fig20_system.py` |
-| 21 | `fig21_fileter_p_prune_plus.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizeFiltersPlusTest+OptimizePackSizeFiltersSprintzPlusTest'`<br>2. `cd {basedir} && python fig21_fileter_p_prune_plus.py` |
+| Quick lookup of script | Figure | Script(s) | Commands (run in order) |
+|------------------------|--------|-----------|-------------------------|
+| `fig2_draw_run_lengths.py` | 2 | `fig2_draw_run_lengths.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#FeatureTest+FeatureAfterSprintzTest'`<br>2. `cd {basedir} && python3 fig2_draw_run_lengths.py` |
+| `fig3_cost_vary_pack_size.py` | 3–4 | `fig3_cost_vary_pack_size.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#testPackSizeCostAnalysis'`<br>2. `cd {basedir} && python3 fig3_cost_vary_pack_size.py` (edit `csv_dir` / `output_dir` in `if __name__ == '__main__'` if needed; one run produces both Fig. 3 and Fig. 4 outputs.) |
+| `fig11_data_characters_predict.py` | 11 | `fig11_data_characters_predict.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizePruneRMQFeatureOutputTest'`<br>2. `cd {basedir} && python3 fig11_data_characters_predict.py` |
+| `fig12_improve_compare_ratio.py` | 12 | `fig12_improve_compare_ratio.py`, then `fig_combine_results.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#BPTest+OptimizePackSizePruneRMQTest+OptimizePackSizePruneRMQSprintzTest+SprintzTest'`<br>2. `cd {basedir} && python3 fig12_improve_compare_ratio.py`<br>3. `cd {basedir} && python3 fig_combine_results.py` |
+| `fig13_alp_cuszp_pack8_vs_v5_combined.py` | 13 | `fig13_alp_cuszp_pack8_vs_v5_combined.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=ALPTest#test0+test1_optimalPackV5,CuSZpCpuTest#cuSZpCpu1DTest+cuSZpCpu1DOptimalV5Test'`<br>2. `cd {basedir} && python3 fig13_alp_cuszp_pack8_vs_v5_combined.py` |
+| `fig14_compare_baseline.py` | 14 | `fig14_compare_baseline.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#BPTest+Simple8bTest+OptimizePackSizePruneRMQTest,HBPIndexLongTest#test0'`<br>2. In **SElfStar**: `mvn test -Dtest=TestCompressorPacksize#testAllCompressor` (see Note below)<br>3. `cd {basedir} && python3 fig14_compare_baseline.py` |
+| `fig15_vary_pack_size.py` | 15 | `fig15_vary_pack_size.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizePruneRMQTest+OptimizePackSizePrunePlusTest+OptimizePackSizeRMQSprintzTest+OptimizePackSizeN2SprintzTest+OptimizePackSizePrunePlusSprintzTest+VaryPackSizeTest+VaryPackSizeSprintzTest'`<br>2. `cd {basedir} && python3 fig15_vary_pack_size.py` |
+| `fig16_vary_page_size.py` | 16 | `fig16_vary_page_size.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#TestVariablePageSizeBP+TestVariablePageSizeSprintz+TestVariablePageSizeBPN2+TestVariablePageSizeSprintzN2+TestVariablePageSizeBPonlyPrune+TestVariablePageSizeSprintzonlyPrune+TestVariablePageSizeBPPruneRMQ+TestVariablePageSizeSprintzPruneRMQ+VaryPageSizeOptimizePackSizeFiltersPlusTest+VaryPageSizeOptimizePackSizeFiltersPlusSprintzTest'`<br>2. `cd {basedir} && python3 fig16_vary_page_size.py` |
+| `fig17_vary_pack_size_sort.py` | 17 | `fig17_vary_pack_size_sort.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#VaryPackSizeTest+VaryPackSizeSortTest+VaryPackSizeSprintzTest+VaryPackSizeSprintzSortTest'`<br>2. `cd {basedir} && python3 fig17_vary_pack_size_sort.py` |
+| `fig18_vary_pack_size_candidate_limited.py` | 18 | `fig18_vary_pack_size_candidate_limited.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizePruneRMQLimitedTest+OptimizePackSizePruneRMQTest'`<br>2. `cd {basedir} && python3 fig18_vary_pack_size_candidate_limited.py` |
+| `fig19_simd.py` | 19 | `fig19_simd.py` | 1. `cd {basedir} && python3 fig19_simd.py` |
+| `fig20_system.py` | 20 | `fig20_system.py` | 1. `cd {basedir} && python3 fig20_system.py` |
+| `fig21_fileter_p_prune_plus.py` | 21 | `fig21_fileter_p_prune_plus.py` | 1. `cd {basedir}/tsfile/java && mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#OptimizePackSizeFiltersPlusTest+OptimizePackSizeFiltersSprintzPlusTest'`<br>2. `cd {basedir} && python3 fig21_fileter_p_prune_plus.py` |
 
-**Surefire:** run from `{basedir}/tsfile/java` with `-pl org.apache.tsfile:tsfile` and a quoted `-Dtest=Class#method…` selector, as in **§3.2** and the **Quick lookup** column. Set `{basedir}` as in **§3 Quick path** and **§3.1**.
+**Surefire:** run from `{basedir}/tsfile/java` with `-pl org.apache.tsfile:tsfile` and a quoted `-Dtest=Class#method…` selector, as in **§3.2** and the **Commands (run in order)** column of **Quick lookup of script**. Set `{basedir}` as in **§3 Quick path** and **§3.1**.
 
 ### Detailed mapping (tests and notes)
 
@@ -118,7 +142,7 @@ Use the **`python …`** step(s) in **§4 → Quick lookup** for your figure. Pa
 |-----------------|--------|------------------------------|------|
 | Figure 2: Distribution of optimal pack sizes for real world datasets (Table 2) compressed by BP and Sprintz | `fig2_draw_run_lengths.py` | `FeatureTest()` and `FeatureAfterSprintzTest()` of `src/OptimizePackSize.java` | Builds combined histograms from `data/features_and_best_p.csv` (BP) and `data/features_and_best_p_sprintz.csv` (Sprintz). |
 | Figure 3: Total storage cost of 1024 values of dataset PM10 (Table 2) under various pack sizes 𝑠. It consists of two parts, the bit width cost and the value cost. | `fig_of_cost_values_bitwidth_in_chunk(...)` in `fig3_cost_vary_pack_size.py` | `testPackSizeCostAnalysis()` of `src/OptimizePackSize.java` | |
-| Figure 4: Example on unimodality of the cost function 𝐶(𝑠) on a subset of pack sizes 𝑠 = 3*2^𝛽 , 𝛽 = 0, 1, 2, . . . , according to Proposition 1 | `create_chunk_vary_3_plots(...)` in `fig3_cost_vary_pack_size.py` | `testPackSizeCostAnalysis()` of `src/OptimizePackSize.java` | Same run as Figure 3; see **Quick lookup** row **3–4**. |
+| Figure 4: Example on unimodality of the cost function 𝐶(𝑠) on a subset of pack sizes 𝑠 = 3*2^𝛽 , 𝛽 = 0, 1, 2, . . . , according to Proposition 1 | `create_chunk_vary_3_plots(...)` in `fig3_cost_vary_pack_size.py` | `testPackSizeCostAnalysis()` of `src/OptimizePackSize.java` | Same run as Figure 3; see **Quick lookup of script** row **3–4**. |
 | Figure 11: Data characters predict the impact of optimal pack sizes | `fig11_data_characters_predict.py` | `OptimizePackSizePruneRMQFeatureOutputTest()` of `src/OptimizePackSize.java` | |
 | Figure 12: Improvement of compression ratio of BP-Prune-RMQ and Sprintz-Prune-RMQ | `fig12_improve_compare_ratio.py` and `fig_combine_results.py` | `BPTest()`, `OptimizePackSizePruneRMQTest`, `OptimizePackSizePruneRMQSprintzTest()`, `SprintzTest()` of `src/OptimizePackSize.java` | |
 | Figure 13: The compression performance of ALP and CuSZp2 with (without) optimal pack size | `fig13_alp_cuszp_pack8_vs_v5_combined.py` | `test0()` and `test1_optimalPackV5()` of `src/ALPTest.java`, `cuSZpCpu1DTest()` and `cuSZpCpu1DOptimalV5Test()` of `src/CuSZpCpuTest.java` | |
