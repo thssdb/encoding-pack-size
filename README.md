@@ -23,7 +23,7 @@ Repository link: https://github.com/thssdb/encoding-pack-size
 
 Branch: main
 
-Commit hash: 7ae0cded5ad3e86cc5f212a7a6e92130e278014c
+Commit hash: 5ca8f92f93f2fcddf6a9291d2449efa2550765c3
 
 ### The repository repo2 of the core implementation
 
@@ -93,11 +93,12 @@ After this, your `{basedir}` is typically the `encoding-pack-size` directory (it
 Benchmark CSVs are produced by **JUnit** in this repository. From **`{basedir}`** (the **encoding-pack-size** root), with **JDK 11+** and **Maven 3.6+**:
 
 ```bash
-cd {basedir}
-mvn test '-Dtest=OptimizePackSizeTest#OptimizePackSizePruneRMQTest'
+cd {basedir}/tsfile/java/tsfile 
+mvn install -pl org.apache.tsfile:tsfile-java,org.apache.tsfile:common -DskipTests
+mvn test -pl org.apache.tsfile:tsfile '-Dtest=OptimizePackSize#DynamicPackingInTsFile'
 ```
 
-Use the exact **`mvn test '-Dtest=…'`** selectors in **§4 → Quick lookup of script**. Join methods on the same class with `+`; separate classes with `,` (see [Maven Surefire](https://maven.apache.org/surefire/maven-surefire-plugin/examples/single-test.html)). **`FloatToIntLosslessTest`** lives on **`OptimizePackSize`** (not `OptimizePackSizeTest`): `mvn test '-Dtest=OptimizePackSize#FloatToIntLosslessTest'`.
+Use the exact **`mvn test '-Dtest=…'`** selectors in **§4 → Quick lookup of script**. Join methods on the same class with `+`; separate classes with `,` (see [Maven Surefire](https://maven.apache.org/surefire/maven-surefire-plugin/examples/single-test.html)). **`FloatToIntLosslessTest`** lives on **`FloatToInteger`**: `mvn test '-Dtest=FloatToInteger#FloatToIntLosslessTest'` (the same method also exists on **`OptimizePackSize`** / **`OptimizePackSizeTest`** if you prefer those classes).
 
 The **tsfile** branch in **§2** remains the canonical home of the same sources for Apache TsFile integration; you only need that checkout if you are hacking or validating inside the full **tsfile** Maven reactor.
 
@@ -129,7 +130,7 @@ Use the **`python3 …`** step(s) in **§4 → Quick lookup of script** for your
 | `fig14_compare_baseline.py` | 14 | `fig14_compare_baseline.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#BPTest+Simple8bTest+OptimizePackSizePruneRMQTest,HBPIndexLongTest#test0'`<br>2. In **SElfStar**: `mvn test -Dtest=TestCompressorPacksize#testAllCompressor` (see Note below)<br>3. `cd {basedir} && python3 fig14_compare_baseline.py` |
 | `fig15_vary_pack_size.py` | 15 | `fig15_vary_pack_size.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#OptimizePackSizePruneRMQTest+OptimizePackSizePrunePlusTest+OptimizePackSizeRMQSprintzTest+OptimizePackSizeN2SprintzTest+OptimizePackSizePrunePlusSprintzTest+VaryPackSizeTest+VaryPackSizeSprintzTest'`<br>2. `cd {basedir} && python3 fig15_vary_pack_size.py` |
 | `fig16_vary_page_size.py` | 16 | `fig16_vary_page_size.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#TestVariablePageSizeBP+TestVariablePageSizeSprintz+TestVariablePageSizeBPN2+TestVariablePageSizeSprintzN2+TestVariablePageSizeBPonlyPrune+TestVariablePageSizeSprintzonlyPrune+TestVariablePageSizeBPPruneRMQ+TestVariablePageSizeSprintzPruneRMQ+VaryPageSizeOptimizePackSizeFiltersPlusTest+VaryPageSizeOptimizePackSizeFiltersPlusSprintzTest'`<br>2. `cd {basedir} && python3 fig16_vary_page_size.py` |
-| `fig17_vary_pack_size_sort.py` | 17 | `fig17_vary_pack_size_sort.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#VaryPackSizeTest+VaryPackSizeSortTest+VaryPackSizeSprintzTest+VaryPackSizeSprintzSortTest'`<br>2. `cd {basedir} && python3 fig17_vary_pack_size_sort.py` |
+| `fig17_vary_pack_size_sort.py` | 17 | `fig17_vary_pack_size_sort.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeSort#BPAll+BPAllSort+BPPruneRMQ+BPPruneRMQSort'`<br>2. `cd {basedir} && python3 fig17_vary_pack_size_sort.py` |
 | `fig18_vary_pack_size_candidate_limited.py` | 18 | `fig18_vary_pack_size_candidate_limited.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#OptimizePackSizePruneRMQLimitedTest+OptimizePackSizePruneRMQTest'`<br>2. `cd {basedir} && python3 fig18_vary_pack_size_candidate_limited.py` |
 | `fig19_simd.py` | 19 | `fig19_simd.py` | 1. `cd {basedir} && python3 fig19_simd.py` |
 | `fig20_system.py` | 20 | `fig20_system.py` | 1. `cd {basedir} && python3 fig20_system.py` |
@@ -150,7 +151,7 @@ Use the **`python3 …`** step(s) in **§4 → Quick lookup of script** for your
 | Figure 14: Comparison with Other Algorithms | `fig14_compare_baseline.py` | `BPTest()`, `Simple8bTest()` and `OptimizePackSizePruneRMQTest()` of `src/OptimizePackSizeTest.java`, `test0()` of `src/HBPIndexLongTest.java`, `testAllCompressor()` of `TestCompressorPacksize.java` | put `TestCompressorPacksize.java` into `SElfStar/src/test/java/` of https://github.com/Spatio-Temporal-Lab/SElfStar |
 | Figure 15: Performance under various fixed pack size 𝑠 | `fig15_vary_pack_size.py` | `OptimizePackSizePruneRMQTest()`, `OptimizePackSizePrunePlusTest()`, `OptimizePackSizeRMQSprintzTest`, `OptimizePackSizeN2SprintzTest()`, `OptimizePackSizePrunePlusSprintzTest`, `VaryPackSizeTest()` and `VaryPackSizeSprintzTest()` of `src/OptimizePackSizeTest.java` | |
 | Figure 16: Performance under various page sizes 𝑛 | `fig16_vary_page_size.py` | `TestVariablePageSizeBP()`, `TestVariablePageSizeSprintz()`, `TestVariablePageSizeBPN2()`, `TestVariablePageSizeSprintzN2`, `TestVariablePageSizeBPonlyPrune()`, `TestVariablePageSizeSprintzonlyPrune()`, `TestVariablePageSizeBPPruneRMQ()`, `TestVariablePageSizeSprintzPruneRMQ()`, `VaryPageSizeOptimizePackSizeFiltersPlusTest()`, and `VaryPageSizeOptimizePackSizeFiltersPlusSprintzTest()` of `src/OptimizePackSizeTest.java` | |
-| Figure 17: Impact of sorting non-time-series data on bit-packing with optimal pack size | `fig17_vary_pack_size_sort.py` | `VaryPackSizeTest()`, `VaryPackSizeSortTest()`, `VaryPackSizeSprintzTest()`, `VaryPackSizeSprintzSortTest()` of `src/OptimizePackSizeTest.java` | |
+| Figure 17: Impact of sorting non-time-series data on bit-packing with optimal pack size | `fig17_vary_pack_size_sort.py` | `BPAll()`, `BPAllSort()`, `BPPruneRMQ()`, `BPPruneRMQSort()` in `src/OptimizePackSizeSort.java`; `VaryPackSizeTest()`, `VaryPackSizeSortTest()`, `VaryPackSizeSprintzTest()`, `VaryPackSizeSprintzSortTest()` in `src/OptimizePackSizeTest.java` | |
 | Figure 18: Compression performance of bit-packing with pre-defined pack sizes and all pack sizes | `fig18_vary_pack_size_candidate_limited.py` | `OptimizePackSizePruneRMQLimitedTest()` and `OptimizePackSizePruneRMQTest()` of `src/OptimizePackSizeTest.java` | |
 | Figure 19: Compression performance of bit-packing optimal pack size with SIMDComp, Fastlane and SIMT | `fig19_simd.py` | — | Consumes CSVs under this repo (e.g. `output_simd/`); generate those with your SIMD experiment pipeline if you are not using bundled example data. |
 | Figure 20: Compression performance impact after deployment in the real system | `fig20_system.py` | — | Expects `output_tsfile_packsize_comparison_cpp/tsfile_comparison_cpp.csv` (paths in the script may need editing). |
@@ -163,7 +164,7 @@ Use the **`python3 …`** step(s) in **§4 → Quick lookup of script** for your
 Floating-point handling on this path is intended to be **lossless** where scaling is applied. The unit test below checks that the decimal scaling logic round-trips without loss under its documented assumptions:
 
 ```bash
-cd {basedir} && mvn test '-Dtest=OptimizePackSize#FloatToIntLosslessTest'
+cd {basedir} && mvn test '-Dtest=FloatToInteger#FloatToIntLosslessTest'
 ```
 
 (`{basedir}` is the same root as in **§3 Quick path**—typically the **encoding-pack-size** checkout.)

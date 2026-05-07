@@ -933,8 +933,7 @@ public class OptimizePackSize {
     }
   }
 
-  @Test
-  public void FloatToIntLosslessTest() throws IOException {
+
     String directory = "TestData";
     File dir = new File(directory);
     Assume.assumeTrue(

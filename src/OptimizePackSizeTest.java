@@ -54,14 +54,14 @@ public class OptimizePackSizeTest {
           "City-lat.csv",
           "City-lon.csv");
 
-  private static final int CHUNK_SIZE = 1024;
+  static final int CHUNK_SIZE = 1024;
 
   /** Benchmark CSV outputs (relative to the process working directory, typically the repo root). */
-  private static final String OPTIMAL_PACK_RESULTS_BASE = "results";
+  static final String OPTIMAL_PACK_RESULTS_BASE = "results";
 
-  private static final int DEFAULT_BENCH_TIME_REPEAT = 100;
+  static final int DEFAULT_BENCH_TIME_REPEAT = 100;
 
-  private static final class EncodedChunk {
+  static class EncodedChunk {
     final byte[] compressed;
     final int[] bitWidths;
     final int packSize;
@@ -75,7 +75,7 @@ public class OptimizePackSizeTest {
     }
   }
 
-  private static EncodedChunk encodeChunkBitPacking(long[] scaledInts, int pack_size) {
+  static EncodedChunk encodeChunkBitPacking(long[] scaledInts, int pack_size) {
     pack_size = Math.max(1, pack_size);
     int num_of_pack_size = (scaledInts.length + pack_size - 1) / pack_size;
     int[] bitWidths = new int[num_of_pack_size];
@@ -94,7 +94,7 @@ public class OptimizePackSizeTest {
     return new EncodedChunk(compressedData, bitWidths, pack_size, scaledInts.length);
   }
 
-  private static void benchChunkedBitPacking(
+  static void benchChunkedBitPacking(
       long[] scaledInts_all,
       int nPoints,
       int chunkSize,
@@ -1966,7 +1966,7 @@ public class OptimizePackSizeTest {
     return bestPackSize;
   }
 
-  private static long[] scaleNumbers(List<String> numbers, int decimalMax) {
+  static long[] scaleNumbers(List<String> numbers, int decimalMax) {
     BigDecimal scale = BigDecimal.TEN.pow(decimalMax);
     int size = numbers.size();
     long[] result = new long[size];
