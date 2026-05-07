@@ -52,7 +52,9 @@ pip install pandas matplotlib numpy scipy openpyxl
 Experimental artifacts (CSV logs, etc.) are produced from the **tsfile** checkout described in **§2**. Replace `{basedir}` with the root directory of your local **tsfile** clone (the repository that contains `java/tsfile`). Example:
 
 ```bash
-cd {basedir}/tsfile/java/tsfile && mvn test -Dtest=AllNo8PacksizeOptimal#OptimalPackSizePruneRMQTest
+cd {basedir}/tsfile/java/tsfile 
+&& mvn install -pl org.apache.tsfile:tsfile-java,org.apache.tsfile:common -DskipTests
+&& mvn test -pl org.apache.tsfile:tsfile '-Dtest=AllNo8PacksizeOptimal#OptimalPackSizePruneRMQTest'
 ```
 
 Use the Maven targets that match each figure or analysis (see §4 for the full figure ↔ script ↔ test mapping).
