@@ -47,7 +47,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class AllNo8PacksizeOptimal {
+public class OptimalPackSize {
 
   static final List<String> IGNORE_FILES =
       Arrays.asList(
