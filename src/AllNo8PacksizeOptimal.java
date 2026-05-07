@@ -18,8 +18,10 @@ import org.apache.tsfile.write.record.datapoint.LongDataPoint;
 import org.apache.tsfile.write.schema.MeasurementSchema;
 import org.apache.tsfile.write.schema.Schema;
 import org.apache.tsfile.utils.Pair;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.junit.runner.JUnitCore;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -2736,6 +2738,11 @@ public class AllNo8PacksizeOptimal {
 
 
     public static void main(String[] args) throws IOException {
+        // Run all @Test methods: java -cp ... AllNo8PacksizeOptimal junit
+        if (args.length > 0 && "junit".equalsIgnoreCase(args[0])) {
+            JUnitCore.main(AllNo8PacksizeOptimal.class.getName());
+            return;
+        }
         System.out.println("\nPerformance Testing...");
         String directory = "../TestData";
         String outputDirstr = "../output_BP_all_no8";
@@ -3058,6 +3065,107 @@ public class AllNo8PacksizeOptimal {
         }
         datasetRecord[12] = String.valueOf(optimalPackSize);
         datasetWriter.writeRecord(datasetRecord);
+    }
+
+    /**
+     * {@link #scaleNumbers(List, int)} is the path that turns decimal CSV strings into {@code int[]}
+     * for bit-packing: {@code floor( (parseDecimal(s) * 10^decimalMax - minBatch) )} as int.
+     * <p>
+     * Lossless w.r.t. the decimal string <strong>iff</strong> (1) every value has at most {@code decimalMax}
+     * fractional digits so {@code value * 10^decimalMax} is an exact integer in {@link BigDecimal}, and
+     * (2) each offset {@code (scaled[i] - min)} lies in {@code int} (otherwise {@link BigInteger#intValue()}
+     * truncates). This test checks (1)+(2) on a small hand-built batch.
+     */
+    @Test
+    public void scaleNumbers_lossless_decimal_fixed_point() {
+        List<String> numbers = Arrays.asList(
+                "1.25", "-3.5", "0", "10.125", "0.001", "-0", "123", "999.999");
+        int decimalMax = 3;
+        int[] got = scaleNumbers(numbers, decimalMax);
+        BigDecimal scale = BigDecimal.TEN.pow(decimalMax);
+        BigDecimal min = null;
+        BigDecimal[] scaledVals = new BigDecimal[numbers.size()];
+        for (int i = 0; i < numbers.size(); i++) {
+            BigDecimal v = new BigDecimal(numbers.get(i)).multiply(scale);
+            scaledVals[i] = v;
+            Assert.assertTrue(
+                    "decimalMax must be >= fractional digits of \"" + numbers.get(i) + "\" so scale is exact",
+                    v.stripTrailingZeros().scale() <= 0);
+            if (min == null || v.compareTo(min) < 0) {
+                min = v;
+            }
+        }
+        for (int i = 0; i < numbers.size(); i++) {
+            BigInteger exact = scaledVals[i].subtract(min).toBigInteger();
+            Assert.assertEquals(
+                    "offset from batch min must match scaleNumbers for index " + i,
+                    exact.intValueExact(),
+                    got[i]);
+        }
+    }
+
+    /**
+     * Mirrors {@link #main}'s CSV scan: for each non-empty cell, record string and fractional length
+     * {@code parts[1].length()} when {@code numStr.contains(".")}, else 0; then
+     * {@code decimalMax = max(decimalPlaces)} and {@code scaleNumbers(batch, decimalMax)} per 1024-sized batch.
+     * Asserts each batch conversion is lossless (exact {@link BigDecimal} fixed-point, offsets in {@code int}).
+     */
+    @Test
+    public void mainPath_scaleNumbers_lossless_like_main() {
+        List<String> numbers = new ArrayList<>();
+        List<Integer> decimalPlaces = new ArrayList<>();
+        String[] cells = {
+                "0", "1.5", "-2.25", "10", "0.001", "99.999", "0001.2300",
+                "-0", "3", "100.1"
+        };
+        for (String value : cells) {
+            String numStr = value.trim();
+            if (numStr.isEmpty()) {
+                continue;
+            }
+            numbers.add(numStr);
+            int decimal = 0;
+            if (numStr.contains(".")) {
+                String[] parts = numStr.split("\\.");
+                decimal = parts[1].length();
+            }
+            decimalPlaces.add(decimal);
+        }
+        int decimalMax = decimalPlaces.stream().max(Integer::compare).orElse(0);
+
+        final int batchSize = 1024;
+        for (int i = 0; i < numbers.size(); i += batchSize) {
+            int end = Math.min(numbers.size(), i + batchSize);
+            List<String> batch = numbers.subList(i, end);
+            int[] scaledBatch = scaleNumbers(batch, decimalMax);
+            assertScaleBatch_losslessMainStyle(batch, decimalMax, scaledBatch);
+        }
+    }
+
+    /** Same lossless check as {@link #scaleNumbers_lossless_decimal_fixed_point} but for an arbitrary batch. */
+    private static void assertScaleBatch_losslessMainStyle(List<String> batch, int decimalMax, int[] scaledBatch) {
+        Assert.assertEquals(batch.size(), scaledBatch.length);
+        BigDecimal scale = BigDecimal.TEN.pow(decimalMax);
+        BigDecimal min = null;
+        BigDecimal[] scaledVals = new BigDecimal[batch.size()];
+        for (int i = 0; i < batch.size(); i++) {
+            BigDecimal v = new BigDecimal(batch.get(i)).multiply(scale);
+            scaledVals[i] = v;
+            Assert.assertTrue(
+                    "main-style decimalMax=" + decimalMax + " must cover fractional digits of \""
+                            + batch.get(i) + "\" (exact integer after * 10^decimalMax)",
+                    v.stripTrailingZeros().scale() <= 0);
+            if (min == null || v.compareTo(min) < 0) {
+                min = v;
+            }
+        }
+        for (int i = 0; i < batch.size(); i++) {
+            BigInteger exact = scaledVals[i].subtract(min).toBigInteger();
+            Assert.assertEquals(
+                    "main-equivalent batch: scaleNumbers vs BigDecimal offset, index " + i,
+                    exact.intValueExact(),
+                    scaledBatch[i]);
+        }
     }
 
     @Test

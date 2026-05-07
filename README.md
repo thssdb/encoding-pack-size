@@ -4,40 +4,38 @@ Artifacts and Python tooling for the **pack-size optimization** experiments repo
 
 ---
 
-## 1. Repository snapshot (branch, commit, scope)
+## 1. Repository snapshot (Repository link, branch, and commit)
 
-| Item | Value |
-|------|--------|
-| **Default branch** | `main` |
-| **Representative commit** | `c2b8ed1841e02a767d7625bf9573032e1abf4dfe` (update this line after each release; run `git rev-parse HEAD`) |
+### The repository repo1 of scripts
 
-**What this tree contains**
+Repository link: https://github.com/thssdb/encoding-pack-size
 
-- Python scripts that read experiment outputs (CSV / Excel) and generate paper figures.
-- A subset of **public float / numeric CSV datasets** under `TestData/` used in the evaluation.
+Branch: main
 
-**What is not vendored here**
+Commit hash: 33b3d1c
 
-- The **full encoder / decoder implementation**, including the **dynamic packing** logic (per-pack-size evaluation, pruning, RMQ-assisted search, and integration with bit-packing and Sprintz), lives in the **compression benchmark harness** that produced the result files referenced by the scripts (see §2). If you are verifying end-to-end behavior, use that harness together with this repository.
+### The repository repo2 of the core implementation
+
+Repository link: https://github.com/apache/tsfile
+
+Branch: research/encoding-pack-size
+
+Commit hash: 
 
 ---
 
 ## 2. Core method and dynamic packing (implementation location)
 
-Reviewers asked for the **dynamic packing** component used in the reported results.
-
 - **In this repository:** analysis and plotting only; no standalone C/C++/Java/Rust compressor sources are checked in.
 - **Implementation of the proposed method (including dynamic packing):** maintained in the **same experimental codebase** used to generate the per-dataset logs and spreadsheets consumed below (e.g. rows such as `Sprintz (Prune-RMQ)`, `BP (Prune-RMQ)`, and related variants in `camel_ratio*.xlsx`). Script comments point to that workflow (for example, references to a Java-side evaluator in `fig_combine_results.py`).
 
-**Action for authors:** Replace this paragraph with a **public URL**, **exact branch name**, and **root path** of the benchmark repository once it is linked for the camera-ready / rebuttal artifact, so reviewers can open the encoder and the dynamic pack-size search in one place.
-
 ---
 
-## 3. Reproducing main figures and tables (to the extent possible from this tree)
+## 3. Commands to run
 
 ### 3.1 Environment
 
-Use Python 3.9+ (tested with common scientific stacks). Install dependencies:
+Use Python 3.9+. Install dependencies:
 
 ```bash
 cd /path/to/encoding-pack-size
@@ -46,29 +44,28 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install pandas matplotlib numpy scipy openpyxl
 ```
 
-### 3.2 Required inputs (not all are committed)
+### 3.2 Required inputs
 
-Several scripts expect **precomputed** experiment outputs next to the repo or under paths you configure:
-
-- `fig2_draw_run_lengths.py` reads `data/features_and_best_p.csv` and `data/features_and_best_p_sprintz.csv` (directory `data/` relative to the repository root). Place these files there after running the feature / optimal-pack-size export from the benchmark, or adjust `_DATA` in the script.
-- `fig_combine_results.py`, `fig_compare_ratio.py`, `fig_vary_page_size.py`, and others reference directories such as `./output_BP`, `./output_sprintz`, `./compare_camel/`, etc., and in some places **absolute paths** left from the authors’ machines. **Search and replace** those paths with your local clone before running.
-
-### 3.3 Commands (examples)
-
-After inputs are in place and paths are fixed:
+Experimental artifacts (CSV logs, etc.) are produced from the **tsfile** checkout described in §1. Replace `{basedir}` with the root directory of your local **tsfile** clone (the repository that contains `java/tsfile`). Example:
 
 ```bash
-# Figure 2: optimal pack-size distributions (see §4)
-python fig2_draw_run_lengths.py
-
-# Other figure / table helpers (run when their inputs exist)
-python fig_compare_ratio.py
-python fig_combine_results.py
-# …and similarly for fig_cost_vary_pack_size.py, fig_vary_pack_size.py,
-# fig_vary_page_size.py, fig_pruning_vary_page_size.py, fig_fileter_p_prune_plus.py
+cd {basedir}/tsfile/java/tsfile && mvn test -Dtest=AllNo8PacksizeOptimal#OptimalPackSizePruneRMQTest
 ```
 
-Outputs are written under `./figure_for_paper/` (and similar folders) as PNG/EPS where applicable.
+Use the Maven targets that match each figure or analysis (see §4 for the full figure ↔ script ↔ test mapping).
+
+### 3.3 Figures (plotting)
+
+After the inputs exist and any script paths are configured, generate figures with the Python scripts—for example:
+
+```bash
+# Figure 2: Distribution of optimal pack sizes for real world datasets (Table 2) compressed by BP and Sprintz (see §4)
+python fig2_draw_run_lengths.py
+# ... additional scripts for other figures (see §4)
+python fig21_fileter_p_prune_plus.py
+```
+
+Outputs are written under `./figure_for_paper/` as PNG/EPS where applicable.
 
 ---
 
@@ -97,10 +94,10 @@ the bit width cost and the value cost. | `fig_of_cost_values_bitwidth_in_chunk(c
 
 ## 5. Floating-point experiments: code path and lossless conversion
 
-- **Datasets (floating-point columns as stored in CSV):** under `TestData/` (e.g. `City-temp.csv`, `Wind-Speed.csv`, …). These files are the **inputs** to the benchmark runs that produced the compression logs consumed by the figure scripts.
-- **Where floating-point values become integers for encoding:** that conversion (scaling, fixed-point representation, ZigZag, or similar) is performed **inside the compression benchmark**, not in the Python files in this repository. This README therefore **cannot** assert losslessness from this tree alone.
+Floating-point handling on this path is intended to be **lossless** where scaling is applied. The unit test below checks that the decimal scaling logic round-trips without loss under its documented assumptions:
 
-**Clarification for reviewers (authors must align with the actual encoder):**
+```bash
+cd {basedir}/tsfile/java/tsfile && mvn test -Dtest=AllNo8PacksizeOptimal#scaleNumbersMultiplyByTenPowDecimalMaxIsLosslesslyInvertible
+```
 
-- State in the **benchmark repository README** whether the FP→integer mapping used in the reported experiments is **bit-exact reversible** (lossless for the values present in each column) or **lossy** (e.g. rounding to a fixed grid), and cite the **exact class / function** that performs the mapping.
-- If the pipeline uses **textual CSV parsing followed by decimal parsing into a fixed-width integer representation with no rounding beyond representable integers**, say so explicitly; otherwise describe the rounding rule.
+(`{basedir}` is the root of your local **tsfile** clone, as in §3.2.)

@@ -98,7 +98,7 @@ for algorithm, data_dir in data_dirs.items():
                 print(f"    Error processing {file_path}: {e}")
                 continue
 
-# Sprintz (b)(d)(f)：pack 8 用 output_sprintz 单行结果；pack 4 / 16 的「压缩比」曲线量在 pack 8 基础上 −0.01 / −0.05
+# Sprintz：若存在 output_sprintz 中与 vary 目录同名的单行结果，仅覆盖 pack 8（pack 4/16 与编解码其余点仍用 vary_pack_size CSV）
 _OUTPUT_SPRINTZ_DIR = os.path.join(
     os.path.dirname(data_dirs['Sprintz']), 'output_sprintz'
 )
@@ -124,14 +124,10 @@ for _idx, _fn in enumerate(_sprintz_csv_order):
         print(f"  Skip output_sprintz override for {_fn}: {_e}")
         continue
     _v8 = 1.0 / _cr
-    _lc4 = compression_ratio_data['Sprintz'][4]
     _lc8 = compression_ratio_data['Sprintz'][8]
-    _lc16 = compression_ratio_data['Sprintz'][16]
-    if _idx >= len(_lc4) or _idx >= len(_lc8) or _idx >= len(_lc16):
+    if _idx >= len(_lc8):
         continue
     compression_ratio_data['Sprintz'][8][_idx] = _v8
-    compression_ratio_data['Sprintz'][4][_idx] = _v8 - 0.01
-    compression_ratio_data['Sprintz'][16][_idx] = _v8 - 0.05
     if _idx < len(encode_time_data['Sprintz'][8]):
         encode_time_data['Sprintz'][8][_idx] = 1.0 / (_enc / 8000.0)
     if _idx < len(decode_time_data['Sprintz'][8]):
@@ -1129,7 +1125,7 @@ _ylim_b = ylim_compression_ab_including_errors(
     'sz',
     sz_bl_meta,
     k_near=5,
-) or (5.3, 9.4)
+)
 plot_vary_line_baseline_bars_by_packsize(
     axs[0, 1],
     vector_sizes,
