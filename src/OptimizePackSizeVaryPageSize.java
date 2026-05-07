@@ -3287,7 +3287,7 @@ public class OptimizePackSizeVaryPageSize {
 
 
   @Test
-  public void VariablePageSizeBP() throws IOException {
+  public void BP() throws IOException {
     System.out.println("\nPerformance Testing with Variable Chunk Sizes...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_vary_page_size";
@@ -3444,7 +3444,7 @@ public class OptimizePackSizeVaryPageSize {
   }
 
   @Test
-  public void VariablePageSizeSprintz() throws IOException {
+  public void Sprintz() throws IOException {
     System.out.println("\nPerformance Testing with Variable Chunk Sizes...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_sprintz_vary_page_size";
@@ -3602,7 +3602,7 @@ public class OptimizePackSizeVaryPageSize {
   }
 
   @Test
-  public void VariablePageSizeBPAll() throws IOException {
+  public void BPAll() throws IOException {
     System.out.println("\nPerformance Testing with Variable Chunk Sizes...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_vary_page_size_N2";
@@ -3767,7 +3767,7 @@ public class OptimizePackSizeVaryPageSize {
   }
 
   @Test
-  public void VariablePageSizeSprintzAll() throws IOException {
+  public void SprintzAll() throws IOException {
     System.out.println("\nPerformance Testing with Variable Chunk Sizes...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_Sprintz_vary_page_size_N2";
@@ -3928,7 +3928,7 @@ public class OptimizePackSizeVaryPageSize {
 
 
   @Test
-  public void VariablePageSizeBPonlyPrune() throws IOException {
+  public void BPonlyPrune() throws IOException {
     System.out.println("\nPerformance Testing with Variable Chunk Sizes...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_only_Prune_vary_page_size";
@@ -4091,7 +4091,7 @@ public class OptimizePackSizeVaryPageSize {
   }
 
   @Test
-  public void VariablePageSizeSprintzonlyPrune() throws IOException {
+  public void SprintzonlyPrune() throws IOException {
     System.out.println("\nPerformance Testing with Variable Chunk Sizes...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_Sprintz_only_Prune_vary_page_size";
@@ -4250,7 +4250,7 @@ public class OptimizePackSizeVaryPageSize {
   }
 
   @Test
-  public void VariablePageSizeBPPruneRMQ() throws IOException {
+  public void BPPruneRMQ() throws IOException {
     System.out.println("\nPerformance Testing with Variable Chunk Sizes...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_Prune_RMQ_vary_page_size";
@@ -4406,7 +4406,7 @@ public class OptimizePackSizeVaryPageSize {
   }
 
   @Test
-  public void VariablePageSizeSprintzPruneRMQ() throws IOException {
+  public void SprintzPruneRMQ() throws IOException {
     System.out.println("\nPerformance Testing with Variable Chunk Sizes...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_Sprintz_Prune_RMQ_vary_page_size";

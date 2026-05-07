@@ -2695,7 +2695,7 @@ public class OptimizePackSizeVaryPackSize {
 
 
   @Test
-  public void OptimizePackSizeN2Sprintz() throws IOException {
+  public void SprintzAll() throws IOException {
     System.out.println("\nPerformance Testing...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_Sprintz_N2_all_no8";
@@ -2813,7 +2813,7 @@ public class OptimizePackSizeVaryPackSize {
 
 
   @Test
-  public void OptimizePackSizeRMQSprintz() throws IOException {
+  public void SprintzPruneRMQ() throws IOException {
     System.out.println("\nPerformance Testing...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_RMQ_all_no8_sprintz";
@@ -2930,7 +2930,7 @@ public class OptimizePackSizeVaryPackSize {
 
 
   @Test
-  public void VaryPackSize() throws IOException {
+  public void BP() throws IOException {
     String directory = "TestData";
     String outputDirStr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_vary_pack_size";
     System.out.println("\nTesting Varying Pack Sizes...");
@@ -3087,6 +3087,121 @@ public class OptimizePackSizeVaryPackSize {
     }
   }
 
+  @Test
+  public void BPAll() throws IOException {
+    String directory = "TestData";
+    String outputDirStr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_All_vary_pack_size";
+    System.out.println("\nBPAll-style encode (chunk bit-packing) vs fixed pack size s...");
+    File outputDir = new File(outputDirStr);
+    outputDir.mkdirs();
+
+    File dir = new File(directory);
+    int[] packSizes = {2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048};
+
+    for (File file : Objects.requireNonNull(dir.listFiles())) {
+      if (IGNORE_FILES.contains(file.getName()) || file.isDirectory()) continue;
+
+      System.out.println("\nTesting file: " + file.getName());
+      String outputFile = outputDirStr + "/" + file.getName();
+      CsvWriter writer = new CsvWriter(outputFile, ',', StandardCharsets.UTF_8);
+
+      String[] head = {
+        "Input Direction",
+        "Encoding Algorithm",
+        "Encoding Time",
+        "Decoding Time",
+        "Points",
+        "Pack size",
+        "Compressed Size",
+        "Compression Ratio"
+      };
+      writer.writeRecord(head);
+
+      List<String> numbers = new ArrayList<>();
+      List<Integer> decimalPlaces = new ArrayList<>();
+      CsvReader csvReader = new CsvReader(file.getPath(), ',', StandardCharsets.UTF_8);
+
+      while (csvReader.readRecord()) {
+        for (String value : csvReader.getValues()) {
+          String numStr = value.trim();
+          if (!numStr.isEmpty()) {
+            numbers.add(numStr);
+            int decimal = 0;
+            if (numStr.contains(".")) {
+              String[] parts = numStr.split("\\.");
+              decimal = parts[1].length();
+            }
+            decimalPlaces.add(decimal);
+          }
+        }
+      }
+      csvReader.close();
+
+      int decimalMax = decimalPlaces.stream().max(Integer::compare).orElse(0);
+      int time_of_repeat = 50;
+
+      int batchSize = 1024;
+      List<long[]> batches = new ArrayList<>();
+      for (int i = 0; i < numbers.size(); i += batchSize) {
+        int end = Math.min(numbers.size(), i + batchSize);
+        List<String> batch = numbers.subList(i, end);
+        long[] scaledBatch = scaleNumbers(batch, decimalMax);
+        batches.add(scaledBatch);
+      }
+
+      int totalLength = batches.stream().mapToInt(arr -> arr.length).sum();
+      long[] scaledInts_all = new long[totalLength];
+      int currentIndex = 0;
+      for (long[] batch : batches) {
+        System.arraycopy(batch, 0, scaledInts_all, currentIndex, batch.length);
+        currentIndex += batch.length;
+      }
+
+      for (int packSize : packSizes) {
+        final int ps = Math.max(1, packSize);
+        System.out.println("Testing pack size: " + ps);
+
+        long[] costA = new long[1];
+        long[] encA = new long[1];
+        long[] decA = new long[1];
+        benchChunkedBitPacking(
+            scaledInts_all,
+            numbers.size(),
+            CHUNK_SIZE,
+            time_of_repeat,
+            chunk -> encodeChunkBitPacking(chunk, ps),
+            ec -> decodeBitPackingV2(ec.compressed, ec.bitWidths, ec.packSize, ec.nInts),
+            costA,
+            encA,
+            decA);
+
+        long modelCost = costA[0];
+        long modelTime = encA[0];
+        long modelDecodeTime = decA[0];
+        int pts = numbers.size();
+
+        double modelTime_throughput = (double) (pts * 8000L) / (double) (modelTime);
+        double modelDecodeTime_throughput = (double) (pts * 8000L) / (double) (modelDecodeTime);
+        double model_ratio = (double) modelCost / (double) (pts * 64L);
+
+        String[] record = {
+          file.toString(),
+          "BP+RMQ+fixed_pack",
+          String.valueOf(modelTime_throughput),
+          String.valueOf(modelDecodeTime_throughput),
+          String.valueOf(pts),
+          String.valueOf(ps),
+          String.valueOf(modelCost),
+          String.valueOf(model_ratio)
+        };
+        writer.writeRecord(record);
+      }
+
+      writer.close();
+      System.out.println("Results saved to: " + outputFile);
+    }
+  }
+
   public static void quickSortDesc(int[] arr, int left, int right) {
     if (left >= right) return;
 
@@ -3149,7 +3264,7 @@ public class OptimizePackSizeVaryPackSize {
 
 
   @Test
-  public void VaryPackSizeSprintz() throws IOException {
+  public void Sprintz() throws IOException {
     String directory = "TestData";
     String outputDirStr = OPTIMAL_PACK_RESULTS_BASE + "/output_Sprintz_vary_pack_size";
     System.out.println("\nTesting Varying Pack Sizes...");
@@ -3508,7 +3623,7 @@ public class OptimizePackSizeVaryPackSize {
 
 
   @Test
-  public void OptimizePackSizePruneRMQ() throws IOException {
+  public void BPPruneRMQ() throws IOException {
     System.out.println("\nPerformance Testing...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_Prune_all_no8";
@@ -3621,7 +3736,7 @@ public class OptimizePackSizeVaryPackSize {
 
 
   @Test
-  public void OptimizePackSizePrunePlus() throws IOException {
+  public void BPPrune() throws IOException {
     System.out.println("\nPerformance Testing...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_BP_only_Prune_Plus_all_no8";
@@ -3731,7 +3846,7 @@ public class OptimizePackSizeVaryPackSize {
   }
 
   @Test
-  public void OptimizePackSizePrunePlusSprintz() throws IOException {
+  public void SprintzPrune() throws IOException {
     System.out.println("\nPerformance Testing...");
     String directory = "TestData";
     String outputDirstr = OPTIMAL_PACK_RESULTS_BASE + "/output_Sprintz_only_Prune_Plus_all_no8";
