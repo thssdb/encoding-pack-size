@@ -70,6 +70,8 @@
             <include>**/OptimizePackSizeVaryPageSize.java</include>
             <include>**/OptimizePackSizeVaryPackSize.java</include>
             <include>**/Baseline.java</include>
+            <include>**/OptimizePackSizeImpoveCompressionRatio.java</include>
+            <include>**/OptimizePackSizeFilter.java</include>
           </includes>
         </configuration>
       </plugin>
