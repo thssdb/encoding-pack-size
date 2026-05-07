@@ -38,13 +38,15 @@ Commit hash: 0157b8a4dc7ada165106d231e9170d629ad80853
 
 ### 3.1 Environment
 
-Use Python 3.9+. Install dependencies:
+Use Python 3.9+. Install dependencies and clone repositorys:
 
 ```bash
-cd /path/to/encoding-pack-size
+git clone https://github.com/thssdb/encoding-pack-size.git
+cd encoding-pack-size
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install pandas matplotlib numpy scipy openpyxl
+git clone -b research/encoding-pack-size --single-branch https://github.com/apache/tsfile/
 ```
 
 ### 3.2 Required inputs
@@ -52,9 +54,9 @@ pip install pandas matplotlib numpy scipy openpyxl
 Experimental artifacts (CSV logs, etc.) are produced from the **tsfile** checkout described in **§2**. Replace `{basedir}` with the root directory of your local **tsfile** clone (the repository that contains `java/tsfile`). Example:
 
 ```bash
-cd {basedir}/tsfile/java/tsfile 
-&& mvn install -pl org.apache.tsfile:tsfile-java,org.apache.tsfile:common -DskipTests
-&& mvn test -pl org.apache.tsfile:tsfile '-Dtest=AllNo8PacksizeOptimal#OptimalPackSizePruneRMQTest'
+cd tsfile/java 
+mvn install -pl org.apache.tsfile:tsfile-java,org.apache.tsfile:common -DskipTests
+mvn test -pl org.apache.tsfile:tsfile '-Dtest=AllNo8PacksizeOptimal#OptimalPackSizePruneRMQTest'
 ```
 
 Use the Maven targets that match each figure or analysis (see §4 for the full figure ↔ script ↔ test mapping).
