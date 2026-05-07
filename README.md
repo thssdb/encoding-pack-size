@@ -12,7 +12,7 @@ Repository link: https://github.com/thssdb/encoding-pack-size
 
 Branch: main
 
-Commit hash: 143f25cfb220c09fb1a7b2852266cd9cebf84172
+Commit hash: 8235cf0a0f926b09fe7cffc9997243aedd71ce38
 
 ### The repository repo2 of the core implementation
 
@@ -74,9 +74,7 @@ Outputs are written under `./figure_for_paper/` as PNG/EPS where applicable.
 |    Manuscript item    | Script | Test Function of Results | Note|
 |-----------------------------|--------|--------|--------|
 | Figure 2: Distribution of optimal pack sizes for real world datasets (Table 2) compressed by BP and Sprintz | `fig2_draw_run_lengths.py` | `FeatureTest()` and `FeatureAfterSprintzTest()` of `src/AllNo8PacksizeOptimal.java` | Builds combined histograms from `data/features_and_best_p.csv` (BP) and `data/features_and_best_p_sprintz.csv` (Sprintz). |
-| Figure 3: Total storage cost of 1024 values of dataset PM10
-(Table 2) under various pack sizes 𝑠. It consists of two parts,
-the bit width cost and the value cost. | `fig_of_cost_values_bitwidth_in_chunk(csv_dir, chunk_output, chunk_size=1024)` of `fig3_cost_vary_pack_size.py` | `testPackSizeCostAnalysis()` of  `src/AllNo8PacksizeOptimal.java` | |
+| Figure 3: Total storage cost of 1024 values of dataset PM10 (Table 2) under various pack sizes 𝑠. It consists of two parts, the bit width cost and the value cost. | `fig_of_cost_values_bitwidth_in_chunk(csv_dir, chunk_output, chunk_size=1024)` of `fig3_cost_vary_pack_size.py` | `testPackSizeCostAnalysis()` of  `src/AllNo8PacksizeOptimal.java` | |
 | Figure 4: Example on unimodality of the cost function 𝐶(𝑠) on a subset of pack sizes 𝑠 = 3*2^𝛽 , 𝛽 = 0, 1, 2, . . . , according to Proposition 1 |  `create_chunk_vary_3_plots(csv_dir, chunk_output, chunk_size=1024)` of `fig3_cost_vary_pack_size.py`  | `testPackSizeCostAnalysis()` of  `src/AllNo8PacksizeOptimal.java` | |
 | Figure 11: Data characters predict the impact of optimal pack sizes |  `fig11_data_characters_predict.py` | `OptimalPackSizePruneRMQFeatureOutputTest()` of `src/AllNo8PacksizeOptimal.java` | |
 | Figure 12: Improvement of compression ratio of BP-Prune-RMQ and Sprintz-Prune-RMQ | `fig12_improve_compare_ratio.py` | `BPTest()`, `OptimalPackSizePruneRMQTest`,`OptimalPackSizePruneRMQSprintzTest()`,`SprintzTest()` of `src/AllNo8PacksizeOptimal.java`  and `fig_combine_results.py`| |
@@ -97,7 +95,7 @@ the bit width cost and the value cost. | `fig_of_cost_values_bitwidth_in_chunk(c
 Floating-point handling on this path is intended to be **lossless** where scaling is applied. The unit test below checks that the decimal scaling logic round-trips without loss under its documented assumptions:
 
 ```bash
-cd {basedir}/tsfile/java/tsfile && mvn test -Dtest=AllNo8PacksizeOptimal#scaleNumbersMultiplyByTenPowDecimalMaxIsLosslesslyInvertible
+cd {basedir}/tsfile/java/tsfile && mvn test -Dtest=AllNo8PacksizeOptimal#FloatToIntLosslessTest
 ```
 
 (`{basedir}` is the root of your local **tsfile** clone, as in §3.2.)
