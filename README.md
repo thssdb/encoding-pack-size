@@ -12,7 +12,7 @@ Repository link: https://github.com/thssdb/encoding-pack-size
 
 Branch: main
 
-Commit hash: 33b3d1c
+Commit hash: d7d8264784b0a85cf82892f6b71a94b4a20b988b
 
 ### The repository repo2 of the core implementation
 
@@ -20,7 +20,7 @@ Repository link: https://github.com/apache/tsfile
 
 Branch: research/encoding-pack-size
 
-Commit hash: 
+Commit hash: 0157b8a4dc7ada165106d231e9170d629ad80853
 
 ---
 
