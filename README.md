@@ -1,4 +1,4 @@
-# encoding-pack-size
+# On Optimizing Pack Size for Bit-Packing
 
 Artifacts and Python tooling for the **pack-size optimization** experiments reported in the paper. 
 This repository is intended to make **figure reproduction** and **inspection of tabulated metrics** straightforward.
@@ -25,7 +25,7 @@ Commit hash: 8235cf0a0f926b09fe7cffc9997243aedd71ce38
 
 ### The repository repo2 of the core implementation
 
-Repository link: https://github.com/apache/tsfile
+Repository link: https://github.com/apache/tsfile/tree/research/encoding-pack-size/
 
 Branch: research/encoding-pack-size
 
@@ -72,7 +72,9 @@ Outputs are written under `./figure_for_paper/` as PNG/EPS where applicable.
 
 ---
 
-## 4. Figure ↔ script mapping (paper cross-reference)
+## 4. Figure <-> script and test functions mapping
+
+- 
 
 |    Manuscript item    | Script | Test Function of Results | Note|
 |-----------------------------|--------|--------|--------|

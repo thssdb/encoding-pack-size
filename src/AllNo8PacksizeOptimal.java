@@ -3888,7 +3888,7 @@ public class AllNo8PacksizeOptimal {
   }
 
   @Test
-  public void scaleNumbersMultiplyByTenPowDecimalMaxIsLosslesslyInvertible() throws IOException {
+  public void FloatToIntLosslessTest() throws IOException {
     String directory = "src/test/resources/TestData";
     File dir = new File(directory);
     Assume.assumeTrue(
