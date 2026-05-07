@@ -23,7 +23,7 @@ Repository link: https://github.com/thssdb/encoding-pack-size
 
 Branch: main
 
-Commit hash: 5ca8f92f93f2fcddf6a9291d2449efa2550765c3
+Commit hash: 97043c2b8a590917277810fa941521d8fb3f5f25
 
 ### The repository repo2 of the core implementation
 
@@ -31,7 +31,7 @@ Repository link: https://github.com/apache/tsfile/tree/research/encoding-pack-si
 
 Branch: research/encoding-pack-size
 
-Commit hash: 0157b8a4dc7ada165106d231e9170d629ad80853
+Commit hash: dabbb4176f80f2a3f33a4acdca500ba2296e9d14
 
 
 ---
@@ -128,8 +128,8 @@ Use the **`python3 …`** step(s) in **§4 → Quick lookup of script** for your
 | `fig12_improve_compare_ratio.py` | 12 | `fig12_improve_compare_ratio.py`, then `fig_combine_results.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#BPTest+OptimizePackSizePruneRMQTest+OptimizePackSizePruneRMQSprintzTest+SprintzTest'`<br>2. `cd {basedir} && python3 fig12_improve_compare_ratio.py`<br>3. `cd {basedir} && python3 fig_combine_results.py` |
 | `fig13_alp_cuszp_pack8_vs_v5_combined.py` | 13 | `fig13_alp_cuszp_pack8_vs_v5_combined.py` | 1. `cd {basedir} && mvn test '-Dtest=ALPTest#test0+test1_optimalPackV5,CuSZpCpuTest#cuSZpCpu1DTest+cuSZpCpu1DOptimalV5Test'`<br>2. `cd {basedir} && python3 fig13_alp_cuszp_pack8_vs_v5_combined.py` |
 | `fig14_compare_baseline.py` | 14 | `fig14_compare_baseline.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#BPTest+Simple8bTest+OptimizePackSizePruneRMQTest,HBPIndexLongTest#test0'`<br>2. In **SElfStar**: `mvn test -Dtest=TestCompressorPacksize#testAllCompressor` (see Note below)<br>3. `cd {basedir} && python3 fig14_compare_baseline.py` |
-| `fig15_vary_pack_size.py` | 15 | `fig15_vary_pack_size.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#OptimizePackSizePruneRMQTest+OptimizePackSizePrunePlusTest+OptimizePackSizeRMQSprintzTest+OptimizePackSizeN2SprintzTest+OptimizePackSizePrunePlusSprintzTest+VaryPackSizeTest+VaryPackSizeSprintzTest'`<br>2. `cd {basedir} && python3 fig15_vary_pack_size.py` |
-| `fig16_vary_page_size.py` | 16 | `fig16_vary_page_size.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#TestVariablePageSizeBP+TestVariablePageSizeSprintz+TestVariablePageSizeBPN2+TestVariablePageSizeSprintzN2+TestVariablePageSizeBPonlyPrune+TestVariablePageSizeSprintzonlyPrune+TestVariablePageSizeBPPruneRMQ+TestVariablePageSizeSprintzPruneRMQ+VaryPageSizeOptimizePackSizeFiltersPlusTest+VaryPageSizeOptimizePackSizeFiltersPlusSprintzTest'`<br>2. `cd {basedir} && python3 fig16_vary_page_size.py` |
+| `fig15_vary_pack_size.py` | 15 | `fig15_vary_pack_size.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeVaryPackSize#OptimizePackSizePruneRMQ+OptimizePackSizePrunePlus+OptimizePackSizeRMQSprintz+OptimizePackSizeN2Sprintz+OptimizePackSizePrunePlusSprintz+VaryPackSize+VaryPackSizeSprintz'`<br>2. `cd {basedir} && python3 fig15_vary_pack_size.py` |
+| `fig16_vary_page_size.py` | 16 | `fig16_vary_page_size.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeVaryPageSize#VariablePageSizeBP+VariablePageSizeSprintz+VariablePageSizeBPAll+VariablePageSizeSprintzAll+VariablePageSizeBPonlyPrune+VariablePageSizeSprintzonlyPrune+VariablePageSizeBPPruneRMQ+VariablePageSizeSprintzPruneRMQ+VaryPageSizeOptimizePackSizeFiltersPlus+VaryPageSizeOptimizePackSizeFiltersPlusSprintz'`<br>2. `cd {basedir} && python3 fig16_vary_page_size.py` |
 | `fig17_vary_pack_size_sort.py` | 17 | `fig17_vary_pack_size_sort.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeSort#BPAll+BPAllSort+BPPruneRMQ+BPPruneRMQSort'`<br>2. `cd {basedir} && python3 fig17_vary_pack_size_sort.py` |
 | `fig18_vary_pack_size_candidate_limited.py` | 18 | `fig18_vary_pack_size_candidate_limited.py` | 1. `cd {basedir} && mvn test '-Dtest=OptimizePackSizeTest#OptimizePackSizePruneRMQLimitedTest+OptimizePackSizePruneRMQTest'`<br>2. `cd {basedir} && python3 fig18_vary_pack_size_candidate_limited.py` |
 | `fig19_simd.py` | 19 | `fig19_simd.py` | 1. `cd {basedir} && python3 fig19_simd.py` |
@@ -149,8 +149,8 @@ Use the **`python3 …`** step(s) in **§4 → Quick lookup of script** for your
 | Figure 12: Improvement of compression ratio of BP-Prune-RMQ and Sprintz-Prune-RMQ | `fig12_improve_compare_ratio.py` and `fig_combine_results.py` | `BPTest()`, `OptimizePackSizePruneRMQTest`, `OptimizePackSizePruneRMQSprintzTest()`, `SprintzTest()` of `src/OptimizePackSizeTest.java` | |
 | Figure 13: The compression performance of ALP and CuSZp2 with (without) optimal pack size | `fig13_alp_cuszp_pack8_vs_v5_combined.py` | `test0()` and `test1_optimalPackV5()` of `src/ALPTest.java`, `cuSZpCpu1DTest()` and `cuSZpCpu1DOptimalV5Test()` of `src/CuSZpCpuTest.java` | |
 | Figure 14: Comparison with Other Algorithms | `fig14_compare_baseline.py` | `BPTest()`, `Simple8bTest()` and `OptimizePackSizePruneRMQTest()` of `src/OptimizePackSizeTest.java`, `test0()` of `src/HBPIndexLongTest.java`, `testAllCompressor()` of `TestCompressorPacksize.java` | put `TestCompressorPacksize.java` into `SElfStar/src/test/java/` of https://github.com/Spatio-Temporal-Lab/SElfStar |
-| Figure 15: Performance under various fixed pack size 𝑠 | `fig15_vary_pack_size.py` | `OptimizePackSizePruneRMQTest()`, `OptimizePackSizePrunePlusTest()`, `OptimizePackSizeRMQSprintzTest`, `OptimizePackSizeN2SprintzTest()`, `OptimizePackSizePrunePlusSprintzTest`, `VaryPackSizeTest()` and `VaryPackSizeSprintzTest()` of `src/OptimizePackSizeTest.java` | |
-| Figure 16: Performance under various page sizes 𝑛 | `fig16_vary_page_size.py` | `TestVariablePageSizeBP()`, `TestVariablePageSizeSprintz()`, `TestVariablePageSizeBPN2()`, `TestVariablePageSizeSprintzN2`, `TestVariablePageSizeBPonlyPrune()`, `TestVariablePageSizeSprintzonlyPrune()`, `TestVariablePageSizeBPPruneRMQ()`, `TestVariablePageSizeSprintzPruneRMQ()`, `VaryPageSizeOptimizePackSizeFiltersPlusTest()`, and `VaryPageSizeOptimizePackSizeFiltersPlusSprintzTest()` of `src/OptimizePackSizeTest.java` | |
+| Figure 15: Performance under various fixed pack size 𝑠 | `fig15_vary_pack_size.py` | `OptimizePackSizePruneRMQ()`, `OptimizePackSizePrunePlus()`, `OptimizePackSizeRMQSprintz()`, `OptimizePackSizeN2Sprintz()`, `OptimizePackSizePrunePlusSprintz()`, `VaryPackSize()`, `VaryPackSizeSprintz()` in `src/OptimizePackSizeVaryPackSize.java` (paper row “AllSprintz” → **`OptimizePackSizeN2Sprintz`** in code) | |
+| Figure 16: Performance under various page sizes 𝑛 | `fig16_vary_page_size.py` | `VariablePageSizeBP()`, `VariablePageSizeSprintz()`, …, `VaryPageSizeOptimizePackSizeFiltersPlus()`, `VaryPageSizeOptimizePackSizeFiltersPlusSprintz()` in `src/OptimizePackSizeVaryPageSize.java` (same suite as **Quick lookup** row **16**) | |
 | Figure 17: Impact of sorting non-time-series data on bit-packing with optimal pack size | `fig17_vary_pack_size_sort.py` | `BPAll()`, `BPAllSort()`, `BPPruneRMQ()`, `BPPruneRMQSort()` in `src/OptimizePackSizeSort.java`; `VaryPackSizeTest()`, `VaryPackSizeSortTest()`, `VaryPackSizeSprintzTest()`, `VaryPackSizeSprintzSortTest()` in `src/OptimizePackSizeTest.java` | |
 | Figure 18: Compression performance of bit-packing with pre-defined pack sizes and all pack sizes | `fig18_vary_pack_size_candidate_limited.py` | `OptimizePackSizePruneRMQLimitedTest()` and `OptimizePackSizePruneRMQTest()` of `src/OptimizePackSizeTest.java` | |
 | Figure 19: Compression performance of bit-packing optimal pack size with SIMDComp, Fastlane and SIMT | `fig19_simd.py` | — | Consumes CSVs under this repo (e.g. `output_simd/`); generate those with your SIMD experiment pipeline if you are not using bundled example data. |

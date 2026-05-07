@@ -1,6 +1,7 @@
 package encoding.packsize;
 
 import com.csvreader.CsvReader;
+import com.csvreader.CsvWriter;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -148,6 +149,104 @@ public class FloatToInteger {
               original.compareTo(decoded));
         }
       }
+    }
+  }
+
+  /**
+   * Export every numeric cell in {@code TestData/} as scaled longs (same batching and {@link
+   * #scaleNumbers} as {@link #FloatToIntLosslessTest}), into {@code TestDataInt/}. For each input
+   * file writes {@code <name>.csv} (one column {@code value}) and {@code <name>_blocks.csv} with
+   * per-1024-block metadata: {@code decimal_max_used} is the file-wide max decimals used for
+   * scaling; {@code decimal_max_in_block} is the max within that block only.
+   */
+  @Test
+  public void exportTestDataIntFromFloatScaling() throws IOException {
+    final String inDir = "TestData";
+    final String outDir = "TestDataInt";
+    final int batchSize = 1024;
+
+    File dir = new File(inDir);
+    Assume.assumeTrue(
+        "Skip: dataset directory missing: " + inDir, dir.exists() && dir.isDirectory());
+
+    File outRoot = new File(outDir);
+    outRoot.mkdirs();
+
+    for (File file : Objects.requireNonNull(dir.listFiles())) {
+      if (IGNORE_FILES.contains(file.getName()) || file.isDirectory()) {
+        continue;
+      }
+      List<String> numbers = new ArrayList<>();
+      List<Integer> decimalPlaces = new ArrayList<>();
+      CsvReader csvReader = new CsvReader(file.getPath(), ',', StandardCharsets.UTF_8);
+      try {
+        while (csvReader.readRecord()) {
+          for (String value : csvReader.getValues()) {
+            String numStr = value.trim();
+            if (!numStr.isEmpty()) {
+              numbers.add(numStr);
+              int decimal = 0;
+              if (numStr.contains(".")) {
+                String[] parts = numStr.split("\\.");
+                decimal = parts[1].length();
+              }
+              decimalPlaces.add(decimal);
+            }
+          }
+        }
+      } finally {
+        csvReader.close();
+      }
+
+      int decimalMaxUsed = decimalPlaces.stream().max(Integer::compare).orElse(0);
+
+      String baseName = file.getName();
+      String intPath = outRoot.getPath() + "/" + baseName;
+      String blockPath =
+          outRoot.getPath()
+              + "/"
+              + (baseName.endsWith(".csv")
+                  ? baseName.substring(0, baseName.length() - 4) + "_blocks.csv"
+                  : baseName + "_blocks.csv");
+
+      CsvWriter intWriter = new CsvWriter(intPath, ',', StandardCharsets.UTF_8);
+      CsvWriter blockWriter = new CsvWriter(blockPath, ',', StandardCharsets.UTF_8);
+      try {
+        intWriter.writeRecord(new String[] {"value"});
+        blockWriter.writeRecord(
+            new String[] {
+              "block_index", "block_size", "decimal_max_used", "decimal_max_in_block",
+            });
+
+        for (int i = 0; i < numbers.size(); i += batchSize) {
+          int end = Math.min(numbers.size(), i + batchSize);
+          List<String> batch = numbers.subList(i, end);
+          List<Integer> batchDecimals = decimalPlaces.subList(i, end);
+          int blockIndex = i / batchSize;
+          int blockSize = end - i;
+
+          int decimalMaxInBlock =
+              batchDecimals.stream().max(Integer::compare).orElse(0);
+
+          long[] scaled = scaleNumbers(batch, decimalMaxUsed);
+          for (long v : scaled) {
+            intWriter.writeRecord(new String[] {Long.toString(v)});
+          }
+
+          blockWriter.writeRecord(
+              new String[] {
+                Integer.toString(blockIndex),
+                Integer.toString(blockSize),
+                Integer.toString(decimalMaxUsed),
+                Integer.toString(decimalMaxInBlock),
+              });
+        }
+      } finally {
+        intWriter.close();
+        blockWriter.close();
+      }
+
+      System.out.println("Wrote " + intPath + " and " + blockPath);
     }
   }
 }
