@@ -1,4 +1,4 @@
-package org.apache.tsfile.encoding;
+package encoding.packsize;
 
 import java.util.Arrays;
 import java.util.BitSet;
