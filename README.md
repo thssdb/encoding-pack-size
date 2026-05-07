@@ -1,10 +1,19 @@
 # encoding-pack-size
 
-Artifacts and Python tooling for the **pack-size optimization** experiments reported in the revised manuscript (Submission #2888). This repository is intended to make **figure reproduction** and **inspection of tabulated metrics** straightforward for reviewers.
+Artifacts and Python tooling for the **pack-size optimization** experiments reported in the paper. 
+This repository is intended to make **figure reproduction** and **inspection of tabulated metrics** straightforward.
 
 ---
 
-## 1. Repository snapshot (Repository link, branch, and commit)
+## 1. Core method and dynamic packing (implementation location)
+
+- **In this repository:** analysis and plotting only.
+- **Implementation of the proposed method (including dynamic packing):** maintained in the **same experimental codebase** used to generate the csv consumed below (e.g. rows such as `Sprintz (Prune-RMQ)`, `BP (Prune-RMQ)`). 
+Script comments point to that workflow (for example, references to a Java-side evaluator in `fig_combine_results.py`).
+
+---
+
+## 2. Repository snapshot (Repository link, branch, and commit)
 
 ### The repository repo1 of scripts
 
@@ -22,12 +31,6 @@ Branch: research/encoding-pack-size
 
 Commit hash: 0157b8a4dc7ada165106d231e9170d629ad80853
 
----
-
-## 2. Core method and dynamic packing (implementation location)
-
-- **In this repository:** analysis and plotting only; no standalone C/C++/Java/Rust compressor sources are checked in.
-- **Implementation of the proposed method (including dynamic packing):** maintained in the **same experimental codebase** used to generate the per-dataset logs and spreadsheets consumed below (e.g. rows such as `Sprintz (Prune-RMQ)`, `BP (Prune-RMQ)`, and related variants in `camel_ratio*.xlsx`). Script comments point to that workflow (for example, references to a Java-side evaluator in `fig_combine_results.py`).
 
 ---
 
