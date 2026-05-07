@@ -3,136 +3,65 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from matplotlib.lines import Line2D
-
-
-# 定义数据目录和算法映射
-data_dirs = {
-    'BP': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_vary_page_size',
-    'Sprintz': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_sprintz_vary_page_size',
-    'BP-All': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_vary_page_size_N2',
-    'Sprintz-All': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_vary_page_size_N2',
-    'BP-Prune': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_only_Prune_vary_page_size',
-    'Sprintz-Prune': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_only_Prune_vary_page_size',
-    'BP-Prune-RMQ': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_Prune_RMQ_vary_page_size',
-    'Sprintz-Prune-RMQ': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_Prune_RMQ_vary_page_size',
-}
-# 数据集映射（根据您之前的定义）
-dataset_mapping = {
-    # 时间序列数据集
-    'City-temp.csv': 'CT',
-    'Wind-Speed.csv': 'WS',
-    'IR-bio-temp.csv': 'IR',
-    'PM10-dust.csv': 'PM10',
-    'Air-pressure.csv': 'AP',
-    'Dew-point-temp.csv': 'DT',
-    'Stocks-UK.csv': 'SUK',
-    'Stocks-USA.csv': 'SUA',
-    'Stocks-DE.csv': 'SDE',
-    # 'Bitcoin-price.csv': 'BP',
-    'Bird-migration.csv': 'BM',
-    # 'Cpu-usage_right.csv': 'CPU',
-    # 'Disk-usage.csv': 'DISK',
-    # 'Mem-usage.csv': 'MEM',
-    
-    # 非时间序列数据集
-    'Food-price.csv': 'FP',
-    # 'electric_vehicle_charging.csv': 'VC',
-    'Blockchain-tr.csv': 'BTR',
-    # 'SSD-bench.csv': 'SB',
-    'City-lat.csv': 'CLT',
-    'City-lon.csv': 'CLN',
-}
-
-# 要分析的pack sizes
-vector_sizes = [16*8, 32*8, 64*8, 128*8, 256*8, 512*8, 1024*8]# [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
-
-# 初始化数据结构（按数据集文件名存，便于用「压缩比最接近均值」的子集算 error bar）
+data_dirs = {'BP': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_vary_page_size', 'Sprintz': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_sprintz_vary_page_size', 'BP-All': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_vary_page_size_N2', 'Sprintz-All': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_vary_page_size_N2', 'BP-Prune': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_only_Prune_vary_page_size', 'Sprintz-Prune': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_only_Prune_vary_page_size', 'BP-Prune-RMQ': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_Prune_RMQ_vary_page_size', 'Sprintz-Prune-RMQ': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_Prune_RMQ_vary_page_size'}
+dataset_mapping = {'City-temp.csv': 'CT', 'Wind-Speed.csv': 'WS', 'IR-bio-temp.csv': 'IR', 'PM10-dust.csv': 'PM10', 'Air-pressure.csv': 'AP', 'Dew-point-temp.csv': 'DT', 'Stocks-UK.csv': 'SUK', 'Stocks-USA.csv': 'SUA', 'Stocks-DE.csv': 'SDE', 'Bird-migration.csv': 'BM', 'Food-price.csv': 'FP', 'Blockchain-tr.csv': 'BTR', 'City-lat.csv': 'CLT', 'City-lon.csv': 'CLN'}
+vector_sizes = [16 * 8, 32 * 8, 64 * 8, 128 * 8, 256 * 8, 512 * 8, 1024 * 8]
 compression_ratio_data = {algo: {size: {} for size in vector_sizes} for algo in data_dirs.keys()}
 encode_time_data = {algo: {size: {} for size in vector_sizes} for algo in data_dirs.keys()}
 decode_time_data = {algo: {size: {} for size in vector_sizes} for algo in data_dirs.keys()}
-
-# 读取和处理数据
 for algorithm, data_dir in data_dirs.items():
-    print(f"Processing algorithm: {algorithm}")
-    
-    # 获取目录中的所有CSV文件
+    print(f'Processing algorithm: {algorithm}')
     for filename in os.listdir(data_dir):
-        if not filename.endswith('.csv') or filename == '.DS_Store' or not filename in dataset_mapping:
+        if not filename.endswith('.csv') or filename == '.DS_Store' or (not filename in dataset_mapping):
             continue
-            
-        # 获取数据集简称
         dataset_name = dataset_mapping.get(filename, filename)
-        print(f"  Processing dataset: {dataset_name} ({filename})")
-        
+        print(f'  Processing dataset: {dataset_name} ({filename})')
         file_path = os.path.join(data_dir, filename)
         if os.path.exists(file_path):
             try:
                 df = pd.read_csv(file_path)
-                
-                # 处理每一行数据
                 for _, row in df.iterrows():
                     pack_size = row['m']
-                    
-                    # 确保pack size是数值类型
                     try:
                         pack_size = int(pack_size)
                     except:
                         continue
-                    
                     if pack_size in vector_sizes:
-                        # 存储压缩比（原始数据中已经是压缩比，不需要取倒数）
                         compression_ratio = float(row['Compression Ratio'])
                         compression_ratio_data[algorithm][pack_size][filename] = 1 / compression_ratio
-
-                        # 存储编码时间
                         encode_time = float(row['Encoding Time'])
                         encode_time_data[algorithm][pack_size][filename] = 1 / (encode_time / 8000)
-
-                        # 存储解码时间
                         decode_time = float(row['Decoding Time'])
                         decode_time_data[algorithm][pack_size][filename] = 1 / (decode_time / 8000)
-                        
             except Exception as e:
-                print(f"    Error processing {file_path}: {e}")
+                print(f'    Error processing {file_path}: {e}')
                 continue
-
-# 计算每个算法在每个pack size下的平均值和标准差
 avg_compression_ratio = {}
 avg_encode_time = {}
 avg_decode_time = {}
-
 std_compression_ratio = {}
 std_encode_time = {}
 std_decode_time = {}
-
 for algorithm in data_dirs.keys():
     avg_compression_ratio[algorithm] = []
     avg_encode_time[algorithm] = []
     avg_decode_time[algorithm] = []
-
     std_compression_ratio[algorithm] = []
     std_encode_time[algorithm] = []
     std_decode_time[algorithm] = []
-    
     for size in vector_sizes:
         if compression_ratio_data[algorithm][size]:
             cr_values = np.array(list(compression_ratio_data[algorithm][size].values()))
             et_values = np.array(list(encode_time_data[algorithm][size].values()))
             dt_values = np.array(list(decode_time_data[algorithm][size].values()))
-
-            # 压缩比的平均值和标准差
             avg_cr = np.mean(cr_values)
             std_cr = np.std(cr_values)
             avg_compression_ratio[algorithm].append(avg_cr)
             std_compression_ratio[algorithm].append(std_cr)
-            
-            # 编码时间的平均值和标准差
             avg_et = np.mean(et_values)
             std_et = np.std(et_values)
             avg_encode_time[algorithm].append(avg_et)
             std_encode_time[algorithm].append(std_et)
-            
-            # 解码时间的平均值和标准差
             avg_dt = np.mean(dt_values)
             std_dt = np.std(dt_values)
             avg_decode_time[algorithm].append(avg_dt)
@@ -141,52 +70,24 @@ for algorithm in data_dirs.keys():
             avg_compression_ratio[algorithm].append(0)
             avg_encode_time[algorithm].append(0)
             avg_decode_time[algorithm].append(0)
-
             std_compression_ratio[algorithm].append(0)
             std_encode_time[algorithm].append(0)
             std_decode_time[algorithm].append(0)
-
-print("\n平均压缩比:")
+print('\nMean compression ratio:')
 for size, ratio in zip(vector_sizes, avg_compression_ratio['BP']):
-    print(f"  Pack size {size}: {ratio:.4f}")
-
-# 颜色映射（与 fig_vary_pack_size 一致）
-algorithm_palette = {
-    'BP': '#1f77b4',
-    'BP-All': '#ff7f0e',
-    'BP-Prune': '#2ca02c',
-    'BP-Prune-RMQ': '#d62728',
-    'Sprintz': '#9467bd',
-    'Sprintz-All': '#8c564b',
-    'Sprintz-Prune': '#e377c2',
-    'Sprintz-Prune-RMQ': '#17becf',
-}
-
-algorithm_markers = {
-    'BP': 'o',
-    'BP-All': 's',
-    'BP-Prune': '^',
-    'BP-Prune-RMQ': 'D',
-    'Sprintz': 'P',
-    'Sprintz-All': 'X',
-    'Sprintz-Prune': 'v',
-    'Sprintz-Prune-RMQ': '*',
-}
-
+    print(f'  Pack size {size}: {ratio:.4f}')
+algorithm_palette = {'BP': '#1f77b4', 'BP-All': '#ff7f0e', 'BP-Prune': '#2ca02c', 'BP-Prune-RMQ': '#d62728', 'Sprintz': '#9467bd', 'Sprintz-All': '#8c564b', 'Sprintz-Prune': '#e377c2', 'Sprintz-Prune-RMQ': '#17becf'}
+algorithm_markers = {'BP': 'o', 'BP-All': 's', 'BP-Prune': '^', 'BP-Prune-RMQ': 'D', 'Sprintz': 'P', 'Sprintz-All': 'X', 'Sprintz-Prune': 'v', 'Sprintz-Prune-RMQ': '*'}
 
 def _positive_finite(vals):
     return [float(x) for x in vals if np.isfinite(x) and float(x) > 0]
 
-
 def _as_value_map(raw_at_pack):
-    """raw_at_pack: dict filename->value or legacy list."""
     if isinstance(raw_at_pack, dict):
         return raw_at_pack
     return {i: v for i, v in enumerate(raw_at_pack)}
 
-
 def yerr_closest_cr(cr_by_ds, y_by_ds, k=3):
-    """在压缩比最接近全体均值的前 k 个数据集上，对 y 做样本标准差，作为对称 error bar。"""
     cr_map = _as_value_map(cr_by_ds)
     y_map = _as_value_map(y_by_ds)
     common = [d for d in cr_map if d in y_map]
@@ -204,17 +105,8 @@ def yerr_closest_cr(cr_by_ds, y_by_ds, k=3):
         return 0.0
     return float(np.std(ys, ddof=1))
 
-
-def ylim_compression_bars_with_errorbar(
-    algorithm_keys,
-    pack_sizes,
-    raw_per_algo_per_pack,
-    compression_cr_raw,
-    pad_frac=0.04,
-    pad_min=0.02,
-):
-    """(a)(b) 等柱图：y 范围包含均值 ±「最接近均值的 三条」标准差误差线，避免裁切 cap。"""
-    lo, hi = np.inf, -np.inf
+def ylim_compression_bars_with_errorbar(algorithm_keys, pack_sizes, raw_per_algo_per_pack, compression_cr_raw, pad_frac=0.04, pad_min=0.02):
+    lo, hi = (np.inf, -np.inf)
     for size in pack_sizes:
         for algo in algorithm_keys:
             vals_map = _as_value_map(raw_per_algo_per_pack[algo].get(size, {}))
@@ -236,26 +128,7 @@ def ylim_compression_bars_with_errorbar(
     pad = max(span * pad_frac, pad_min)
     return (float(lo - pad), float(hi + pad))
 
-
-def plot_grouped_boxes_multi_algo(
-    ax,
-    pack_sizes,
-    algorithm_keys,
-    raw_per_algo_per_pack,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    ylabel,
-    title,
-    xlabel=r'Page Size $n$',
-    ylim=None,
-    yscale='linear',
-    show_boxes=True,
-    stagger_algorithms=True,
-    compression_cr_raw=None,
-):
-    """多算法：可箱线+均值折线，或 show_boxes=False 时仅均值折线（如 (g)(h) 去掉箱宽/须线）。
-    stagger_algorithms=False：同一 xtick 上各算法共用同一 x（点对齐，用于 (c)–(f)）。"""
+def plot_grouped_boxes_multi_algo(ax, pack_sizes, algorithm_keys, raw_per_algo_per_pack, algorithm_palette, exponent_labels, fontsize, ylabel, title, xlabel='Page Size $n$', ylim=None, yscale='linear', show_boxes=True, stagger_algorithms=True, compression_cr_raw=None):
     n_slot = len(algorithm_keys)
     bw = 0.14
     gap = 0.06
@@ -268,11 +141,9 @@ def plot_grouped_boxes_multi_algo(
     else:
         offs = np.zeros(n_slot, dtype=float)
         group_pitch = bw + inter_group
-
     xs_mean = [[] for _ in range(n_slot)]
     ys_mean = [[] for _ in range(n_slot)]
     yerr_per_j = [[] for _ in range(n_slot)]
-
     for i, size in enumerate(pack_sizes):
         center = i * group_pitch
         for j, algo in enumerate(algorithm_keys):
@@ -293,14 +164,7 @@ def plot_grouped_boxes_multi_algo(
             else:
                 yerr_per_j[j].append(0.0)
             if show_boxes:
-                bp = ax.boxplot(
-                    [vals],
-                    positions=[pos],
-                    widths=bw,
-                    patch_artist=True,
-                    manage_ticks=False,
-                    showfliers=False,
-                )
+                bp = ax.boxplot([vals], positions=[pos], widths=bw, patch_artist=True, manage_ticks=False, showfliers=False)
                 color = algorithm_palette[algo]
                 for patch in bp['boxes']:
                     patch.set_facecolor(color)
@@ -314,22 +178,11 @@ def plot_grouped_boxes_multi_algo(
                     ln.set_visible(False)
                 for ln in bp['caps']:
                     ln.set_visible(False)
-
     for j, algo in enumerate(algorithm_keys):
         if len(xs_mean[j]) == 0:
             continue
         mk = algorithm_markers.get(algo, 'o')
-        ax.plot(
-            xs_mean[j],
-            ys_mean[j],
-            color=algorithm_palette[algo],
-            linestyle='-',
-            linewidth=2.0,
-            marker=mk,
-            markersize=5,
-            zorder=5,
-            clip_on=True,
-        )
+        ax.plot(xs_mean[j], ys_mean[j], color=algorithm_palette[algo], linestyle='-', linewidth=2.0, marker=mk, markersize=5, zorder=5, clip_on=True)
         if compression_cr_raw is not None and len(xs_mean[j]) > 0:
             if yscale == 'log':
                 yerr_plot = []
@@ -342,25 +195,14 @@ def plot_grouped_boxes_multi_algo(
                         yerr_plot.append(min(float(e), 0.99 * float(y)))
             else:
                 yerr_plot = list(yerr_per_j[j])
-            xe, ye, ee = [], [], []
+            xe, ye, ee = ([], [], [])
             for x, y, e in zip(xs_mean[j], ys_mean[j], yerr_plot):
-                if np.isfinite(x) and np.isfinite(y) and np.isfinite(e) and e >= 0:
+                if np.isfinite(x) and np.isfinite(y) and np.isfinite(e) and (e >= 0):
                     xe.append(x)
                     ye.append(y)
                     ee.append(e)
             if xe:
-                ax.errorbar(
-                    xe,
-                    ye,
-                    yerr=ee,
-                    fmt='none',
-                    ecolor='black',
-                    elinewidth=1.0,
-                    capsize=3,
-                    capthick=1.0,
-                    zorder=6,
-                )
-
+                ax.errorbar(xe, ye, yerr=ee, fmt='none', ecolor='black', elinewidth=1.0, capsize=3, capthick=1.0, zorder=6)
     ax.set_xticks([i * group_pitch for i in range(len(pack_sizes))])
     ax.set_xticklabels(exponent_labels)
     ax.set_xlabel(xlabel, fontsize=fontsize)
@@ -372,23 +214,7 @@ def plot_grouped_boxes_multi_algo(
     if ylim is not None:
         ax.set_ylim(*ylim)
 
-
-def plot_grouped_bars_multi_algo(
-    ax,
-    pack_sizes,
-    algorithm_keys,
-    raw_per_algo_per_pack,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    ylabel,
-    title,
-    xlabel=r'Page Size $n$',
-    ylim=None,
-    yscale='linear',
-    compression_cr_raw=None,
-):
-    """每个 page size 一组并排柱 + 各算法跨 page 的均值点线（与柱同位置连成折线）。"""
+def plot_grouped_bars_multi_algo(ax, pack_sizes, algorithm_keys, raw_per_algo_per_pack, algorithm_palette, exponent_labels, fontsize, ylabel, title, xlabel='Page Size $n$', ylim=None, yscale='linear', compression_cr_raw=None):
     n_slot = len(algorithm_keys)
     bw = 0.14
     gap = 0.06
@@ -397,11 +223,9 @@ def plot_grouped_bars_multi_algo(
     offs = np.linspace(-spread / 2, spread / 2, n_slot) if n_slot > 1 else np.array([0.0])
     inter_group = 0.48
     group_pitch = spread + bw + inter_group
-
     xs_mean = [[] for _ in range(n_slot)]
     ys_mean = [[] for _ in range(n_slot)]
     yerr_per_j = [[] for _ in range(n_slot)]
-
     for i, size in enumerate(pack_sizes):
         center = i * group_pitch
         for j, algo in enumerate(algorithm_keys):
@@ -426,52 +250,21 @@ def plot_grouped_bars_multi_algo(
                 yerr_per_j[j].append(0.0)
             draw_bar = np.isfinite(m) and (yscale != 'log' or m > 0)
             if draw_bar:
-                ax.bar(
-                    pos,
-                    m,
-                    width=bw * 0.92,
-                    color=algorithm_palette[algo],
-                    alpha=0.88,
-                    edgecolor='none',
-                    align='center',
-                    zorder=4,
-                )
-
+                ax.bar(pos, m, width=bw * 0.92, color=algorithm_palette[algo], alpha=0.88, edgecolor='none', align='center', zorder=4)
     for j, algo in enumerate(algorithm_keys):
         if len(xs_mean[j]) == 0:
             continue
         mk = algorithm_markers.get(algo, 'o')
-        ax.plot(
-            xs_mean[j],
-            ys_mean[j],
-            color=algorithm_palette[algo],
-            linestyle='-',
-            linewidth=2.0,
-            marker=mk,
-            markersize=5,
-            zorder=6,
-            clip_on=True,
-        )
+        ax.plot(xs_mean[j], ys_mean[j], color=algorithm_palette[algo], linestyle='-', linewidth=2.0, marker=mk, markersize=5, zorder=6, clip_on=True)
         if compression_cr_raw is not None and len(xs_mean[j]) > 0:
-            xe, ye, ee = [], [], []
+            xe, ye, ee = ([], [], [])
             for x, y, e in zip(xs_mean[j], ys_mean[j], yerr_per_j[j]):
-                if np.isfinite(x) and np.isfinite(y) and np.isfinite(e) and e >= 0:
+                if np.isfinite(x) and np.isfinite(y) and np.isfinite(e) and (e >= 0):
                     xe.append(x)
                     ye.append(y)
                     ee.append(e)
             if xe:
-                ax.errorbar(
-                    xe,
-                    ye,
-                    yerr=ee,
-                    fmt='none',
-                    ecolor='black',
-                    elinewidth=1.0,
-                    capsize=3,
-                    capthick=1.0,
-                    zorder=7,
-                )
-
+                ax.errorbar(xe, ye, yerr=ee, fmt='none', ecolor='black', elinewidth=1.0, capsize=3, capthick=1.0, zorder=7)
     ax.set_xticks([i * group_pitch for i in range(len(pack_sizes))])
     ax.set_xticklabels(exponent_labels)
     ax.set_xlabel(xlabel, fontsize=fontsize)
@@ -482,7 +275,6 @@ def plot_grouped_bars_multi_algo(
         ax.set_yscale('log')
     if ylim is not None:
         ax.set_ylim(*ylim)
-
 
 def ylim_compression_page(algos, raw_dict, pack_sizes, ymax_cap=None):
     v = []
@@ -496,13 +288,12 @@ def ylim_compression_page(algos, raw_dict, pack_sizes, ymax_cap=None):
     if len(v) < 2:
         return None
     lo, hi = np.percentile(v, [20, 80])
-    lo, hi = float(max(0.0, lo)), float(hi)
+    lo, hi = (float(max(0.0, lo)), float(hi))
     if ymax_cap is not None:
         hi = min(hi, float(ymax_cap))
     if hi <= lo:
         lo = max(0.0, hi - 0.5)
     return (lo, hi)
-
 
 def ylim_encode_log_page(algos, raw_dict, pack_sizes, pad=0.12):
     v = []
@@ -513,305 +304,55 @@ def ylim_encode_log_page(algos, raw_dict, pack_sizes, pad=0.12):
             v.extend(_positive_finite(seq))
     if not v:
         return (10.0, 2000.0)
-    lo, hi = min(v), max(v)
+    lo, hi = (min(v), max(v))
     return (lo * (1 - pad), hi * (1 + pad))
-
-
 bp_group = ['BP', 'BP-All', 'BP-Prune', 'BP-Prune-RMQ']
 sprintz_group = ['Sprintz', 'Sprintz-All', 'Sprintz-Prune', 'Sprintz-Prune-RMQ']
-
 fig, axs = plt.subplots(4, 2, figsize=(14, 20))
 plt.subplots_adjust(wspace=0.065 * 4 * (2 / 3) + 0.05, hspace=0.38)
-
 fontsize = 22
 exponents = [int(np.log2(ps)) for ps in vector_sizes]
 exponent_labels = [f'$2^{{{exp}}}$' for exp in exponents]
 plt.rcParams.update({'font.size': fontsize})
-
-_ylim_a = ylim_compression_bars_with_errorbar(
-    bp_group,
-    vector_sizes,
-    compression_ratio_data,
-    compression_ratio_data,
-) or (4.8, 5.4)
-plot_grouped_bars_multi_algo(
-    axs[0, 0],
-    vector_sizes,
-    bp_group,
-    compression_ratio_data,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    'Compression ratio',
-    '(a) BP: Compression Ratio',
-    ylim=_ylim_a,
-    compression_cr_raw=compression_ratio_data,
-)
+_ylim_a = ylim_compression_bars_with_errorbar(bp_group, vector_sizes, compression_ratio_data, compression_ratio_data) or (4.8, 5.4)
+plot_grouped_bars_multi_algo(axs[0, 0], vector_sizes, bp_group, compression_ratio_data, algorithm_palette, exponent_labels, fontsize, 'Compression ratio', '(a) BP: Compression Ratio', ylim=_ylim_a, compression_cr_raw=compression_ratio_data)
 _ylim_c = ylim_encode_log_page(bp_group, encode_time_data, vector_sizes)
-plot_grouped_boxes_multi_algo(
-    axs[1, 0],
-    vector_sizes,
-    bp_group,
-    encode_time_data,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    'Time (ns/point)',
-    '(c) BP: Compression Time',
-    ylim=_ylim_c,
-    yscale='log',
-    show_boxes=False,
-    stagger_algorithms=False,
-    compression_cr_raw=compression_ratio_data,
-)
-plot_grouped_boxes_multi_algo(
-    axs[2, 0],
-    vector_sizes,
-    bp_group,
-    decode_time_data,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    'Time (ns/point)',
-    '(e) BP: Decompression Time',
-    ylim=(0, 30),
-    show_boxes=False,
-    stagger_algorithms=False,
-    compression_cr_raw=compression_ratio_data,
-)
-
-_ylim_b = ylim_compression_bars_with_errorbar(
-    sprintz_group,
-    vector_sizes,
-    compression_ratio_data,
-    compression_ratio_data,
-) or (6.2, 6.8)
-plot_grouped_bars_multi_algo(
-    axs[0, 1],
-    vector_sizes,
-    sprintz_group,
-    compression_ratio_data,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    'Compression ratio',
-    '(b) Sprintz: Compression Ratio',
-    ylim=_ylim_b,
-    compression_cr_raw=compression_ratio_data,
-)
+plot_grouped_boxes_multi_algo(axs[1, 0], vector_sizes, bp_group, encode_time_data, algorithm_palette, exponent_labels, fontsize, 'Time (ns/point)', '(c) BP: Compression Time', ylim=_ylim_c, yscale='log', show_boxes=False, stagger_algorithms=False, compression_cr_raw=compression_ratio_data)
+plot_grouped_boxes_multi_algo(axs[2, 0], vector_sizes, bp_group, decode_time_data, algorithm_palette, exponent_labels, fontsize, 'Time (ns/point)', '(e) BP: Decompression Time', ylim=(0, 30), show_boxes=False, stagger_algorithms=False, compression_cr_raw=compression_ratio_data)
+_ylim_b = ylim_compression_bars_with_errorbar(sprintz_group, vector_sizes, compression_ratio_data, compression_ratio_data) or (6.2, 6.8)
+plot_grouped_bars_multi_algo(axs[0, 1], vector_sizes, sprintz_group, compression_ratio_data, algorithm_palette, exponent_labels, fontsize, 'Compression ratio', '(b) Sprintz: Compression Ratio', ylim=_ylim_b, compression_cr_raw=compression_ratio_data)
 _ylim_d = ylim_encode_log_page(sprintz_group, encode_time_data, vector_sizes)
-plot_grouped_boxes_multi_algo(
-    axs[1, 1],
-    vector_sizes,
-    sprintz_group,
-    encode_time_data,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    'Time (ns/point)',
-    '(d) Sprintz: Compression Time',
-    ylim=_ylim_d,
-    yscale='log',
-    show_boxes=False,
-    stagger_algorithms=False,
-    compression_cr_raw=compression_ratio_data,
-)
-plot_grouped_boxes_multi_algo(
-    axs[2, 1],
-    vector_sizes,
-    sprintz_group,
-    decode_time_data,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    'Time (ns/point)',
-    '(f) Sprintz: Decompression Time',
-    ylim=(0, 30),
-    show_boxes=False,
-    stagger_algorithms=False,
-    compression_cr_raw=compression_ratio_data,
-)
-
-
-# ---------- Pruning rate（独立目录，勿覆盖外层 data_dirs）----------
-prune_data_dirs = {
-    'BP-Prune': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_filters_plus_vary_page_size',
-    'Sprintz-Prune': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_filters_plus_vary_page_size',
-}
-
-# 初始化数据结构
+plot_grouped_boxes_multi_algo(axs[1, 1], vector_sizes, sprintz_group, encode_time_data, algorithm_palette, exponent_labels, fontsize, 'Time (ns/point)', '(d) Sprintz: Compression Time', ylim=_ylim_d, yscale='log', show_boxes=False, stagger_algorithms=False, compression_cr_raw=compression_ratio_data)
+plot_grouped_boxes_multi_algo(axs[2, 1], vector_sizes, sprintz_group, decode_time_data, algorithm_palette, exponent_labels, fontsize, 'Time (ns/point)', '(f) Sprintz: Decompression Time', ylim=(0, 30), show_boxes=False, stagger_algorithms=False, compression_cr_raw=compression_ratio_data)
+prune_data_dirs = {'BP-Prune': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_BP_filters_plus_vary_page_size', 'Sprintz-Prune': '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/output_Sprintz_filters_plus_vary_page_size'}
 pruning_rate_data = {algo: {size: {} for size in vector_sizes} for algo in prune_data_dirs.keys()}
-
-# 读取和处理数据
 for algorithm, data_dir in prune_data_dirs.items():
-    # print(f"Processing algorithm: {algorithm}")
-    
-    # 获取目录中的所有CSV文件
     for filename in os.listdir(data_dir):
-        if not filename.endswith('.csv') or filename == '.DS_Store' or not filename in dataset_mapping:
+        if not filename.endswith('.csv') or filename == '.DS_Store' or (not filename in dataset_mapping):
             continue
-            
-        # 获取数据集简称
         dataset_name = dataset_mapping.get(filename, filename)
-        # print(f"  Processing dataset: {dataset_name} ({filename})")
-        
         file_path = os.path.join(data_dir, filename)
         if os.path.exists(file_path):
             try:
                 df = pd.read_csv(file_path)
-                
-                # 处理每一行数据
                 for _, row in df.iterrows():
                     pack_size = row['Page size']
-                    
-                    # 确保pack size是数值类型
                     try:
                         pack_size = int(pack_size)
                     except:
                         continue
-                    
                     if pack_size in vector_sizes:
-                        # 存储压缩比（原始数据中已经是压缩比，不需要取倒数）
                         filter_count = float(row['Filter Count'])
                         page_size = float(row['Page size'])
-                        pruning_rate_data[algorithm][pack_size][filename] = (
-                            filter_count / page_size * 100
-                        )
-                        
-
+                        pruning_rate_data[algorithm][pack_size][filename] = filter_count / page_size * 100
             except Exception as e:
-                print(f"    Error processing {file_path}: {e}")
+                print(f'    Error processing {file_path}: {e}')
                 continue
-
-plot_grouped_boxes_multi_algo(
-    axs[3, 0],
-    vector_sizes,
-    ['BP-Prune'],
-    pruning_rate_data,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    'Percentage (% of page size)',
-    '(g) BP: Pruning Rate',
-    ylim=(0, 105),
-    show_boxes=False,
-    compression_cr_raw=compression_ratio_data,
-)
-plot_grouped_boxes_multi_algo(
-    axs[3, 1],
-    vector_sizes,
-    ['Sprintz-Prune'],
-    pruning_rate_data,
-    algorithm_palette,
-    exponent_labels,
-    fontsize,
-    'Percentage (% of page size)',
-    '(h) Sprintz: Pruning Rate',
-    ylim=(0, 105),
-    show_boxes=False,
-    compression_cr_raw=compression_ratio_data,
-)
-
-legend_handles = [
-    Line2D(
-        [0],
-        [0],
-        color=algorithm_palette['BP'],
-        linestyle='-',
-        linewidth=2.0,
-        marker=algorithm_markers['BP'],
-        markersize=5,
-        label=r'BP',
-    ),
-    Line2D(
-        [0],
-        [0],
-        color=algorithm_palette['BP-All'],
-        linestyle='-',
-        linewidth=2.0,
-        marker=algorithm_markers['BP-All'],
-        markersize=5,
-        label='BP–All',
-    ),
-    Line2D(
-        [0],
-        [0],
-        color=algorithm_palette['BP-Prune'],
-        linestyle='-',
-        linewidth=2.0,
-        marker=algorithm_markers['BP-Prune'],
-        markersize=5,
-        label='BP–Prune',
-    ),
-    Line2D(
-        [0],
-        [0],
-        color=algorithm_palette['BP-Prune-RMQ'],
-        linestyle='-',
-        linewidth=2.0,
-        marker=algorithm_markers['BP-Prune-RMQ'],
-        markersize=5,
-        label='BP–Prune–RMQ',
-    ),
-    Line2D(
-        [0],
-        [0],
-        color=algorithm_palette['Sprintz'],
-        linestyle='-',
-        linewidth=2.0,
-        marker=algorithm_markers['Sprintz'],
-        markersize=5,
-        label=r'Sprintz',
-    ),
-    Line2D(
-        [0],
-        [0],
-        color=algorithm_palette['Sprintz-All'],
-        linestyle='-',
-        linewidth=2.0,
-        marker=algorithm_markers['Sprintz-All'],
-        markersize=5,
-        label='Sprintz–All',
-    ),
-    Line2D(
-        [0],
-        [0],
-        color=algorithm_palette['Sprintz-Prune'],
-        linestyle='-',
-        linewidth=2.0,
-        marker=algorithm_markers['Sprintz-Prune'],
-        markersize=5,
-        label='Sprintz–Prune',
-    ),
-    Line2D(
-        [0],
-        [0],
-        color=algorithm_palette['Sprintz-Prune-RMQ'],
-        linestyle='-',
-        linewidth=2.0,
-        marker=algorithm_markers['Sprintz-Prune-RMQ'],
-        markersize=5,
-        label='Sprintz–Prune–RMQ',
-    ),
-]
-fig.legend(
-    legend_handles,
-    [h.get_label() for h in legend_handles],
-    loc='upper center',
-    ncol=4,
-    labelspacing=0.15,
-    handletextpad=0.35,
-    columnspacing=0.9,
-    fontsize=fontsize,
-    bbox_to_anchor=(0.5, 0.95),
-)
-
-# 调整子图间距
-# plt.tight_layout()
-
-# 保存图片
-output_dir = "/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/figure_for_paper"
+plot_grouped_boxes_multi_algo(axs[3, 0], vector_sizes, ['BP-Prune'], pruning_rate_data, algorithm_palette, exponent_labels, fontsize, 'Percentage (% of page size)', '(g) BP: Pruning Rate', ylim=(0, 105), show_boxes=False, compression_cr_raw=compression_ratio_data)
+plot_grouped_boxes_multi_algo(axs[3, 1], vector_sizes, ['Sprintz-Prune'], pruning_rate_data, algorithm_palette, exponent_labels, fontsize, 'Percentage (% of page size)', '(h) Sprintz: Pruning Rate', ylim=(0, 105), show_boxes=False, compression_cr_raw=compression_ratio_data)
+legend_handles = [Line2D([0], [0], color=algorithm_palette['BP'], linestyle='-', linewidth=2.0, marker=algorithm_markers['BP'], markersize=5, label='BP'), Line2D([0], [0], color=algorithm_palette['BP-All'], linestyle='-', linewidth=2.0, marker=algorithm_markers['BP-All'], markersize=5, label='BP–All'), Line2D([0], [0], color=algorithm_palette['BP-Prune'], linestyle='-', linewidth=2.0, marker=algorithm_markers['BP-Prune'], markersize=5, label='BP–Prune'), Line2D([0], [0], color=algorithm_palette['BP-Prune-RMQ'], linestyle='-', linewidth=2.0, marker=algorithm_markers['BP-Prune-RMQ'], markersize=5, label='BP–Prune–RMQ'), Line2D([0], [0], color=algorithm_palette['Sprintz'], linestyle='-', linewidth=2.0, marker=algorithm_markers['Sprintz'], markersize=5, label='Sprintz'), Line2D([0], [0], color=algorithm_palette['Sprintz-All'], linestyle='-', linewidth=2.0, marker=algorithm_markers['Sprintz-All'], markersize=5, label='Sprintz–All'), Line2D([0], [0], color=algorithm_palette['Sprintz-Prune'], linestyle='-', linewidth=2.0, marker=algorithm_markers['Sprintz-Prune'], markersize=5, label='Sprintz–Prune'), Line2D([0], [0], color=algorithm_palette['Sprintz-Prune-RMQ'], linestyle='-', linewidth=2.0, marker=algorithm_markers['Sprintz-Prune-RMQ'], markersize=5, label='Sprintz–Prune–RMQ')]
+fig.legend(legend_handles, [h.get_label() for h in legend_handles], loc='upper center', ncol=4, labelspacing=0.15, handletextpad=0.35, columnspacing=0.9, fontsize=fontsize, bbox_to_anchor=(0.5, 0.95))
+output_dir = '/Users/xiaojinzhao/Documents/GitHub/encoding-pack-size/figure_for_paper'
 os.makedirs(output_dir, exist_ok=True)
-
 plt.savefig(os.path.join(output_dir, 'bp_vary_page_size.png'), dpi=400, bbox_inches='tight')
 plt.savefig(os.path.join(output_dir, 'bp_vary_page_size.eps'), format='eps', dpi=400, bbox_inches='tight')

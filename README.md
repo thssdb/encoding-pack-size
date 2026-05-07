@@ -12,7 +12,7 @@ Repository link: https://github.com/thssdb/encoding-pack-size
 
 Branch: main
 
-Commit hash: d7d8264784b0a85cf82892f6b71a94b4a20b988b
+Commit hash: 143f25cfb220c09fb1a7b2852266cd9cebf84172
 
 ### The repository repo2 of the core implementation
 
