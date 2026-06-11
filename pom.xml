@@ -32,7 +32,7 @@
 
   <build>
     <!-- All sources live under src/ (historical layout); compile them as tests only. -->
-    <testSourceDirectory>src</testSourceDirectory>
+    <testSourceDirectory>src/encoding/packsize</testSourceDirectory>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
