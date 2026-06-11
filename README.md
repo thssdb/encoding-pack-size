@@ -189,20 +189,6 @@ cd {basedir}
 python3 fig15_system.py
 ```
 
-**Useful environment variables**
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `TSFILE_CPP_DIR` | auto-detect | Path to `tsfile/cpp` |
-| `TSFILE_TEST_BIN` | auto-detect | Path to `TsFile_Test` executable |
-| `TSFILE_BENCHMARK_DATA_DIR` | `{basedir}/TestData` | Input CSV directory for the C++ benchmark |
-| `TSFILE_BENCHMARK_WARMUP` | `0` | Warmup iterations |
-| `TSFILE_BENCHMARK_MEASURE_REPEATS` | `5` | Timed measurement rounds per mode |
-| `TSFILE_DATASET_LIMIT` | unlimited | Stop after N datasets (smoke tests) |
-| `TSFILE_DATASET_NAMES` | all `*.csv` | Comma-separated allowlist, e.g. `books.csv,fb.csv` |
-
-**Note:** The C++ benchmark repeats each dataset **100×** internally. Large files (`books.csv`, `fb.csv`, `Census-Population.csv`, up to 1M values each) can take a long time. For a quick check, run `TSFILE_DATASET_LIMIT=2 ./scripts/run_fig15_system_integer.sh`.
-
 **macOS build troubleshooting:** If `cmake --build` fails with `'cstddef' file not found` or `'sys/types.h' file not found`, delete `tsfile/cpp/build` and reconfigure with the macOS SDK and `/usr/bin/clang++` (the helper script does this automatically). If ANTLR4 download from GitHub times out, use `-DENABLE_ANTLR4=OFF` — sufficient for the Fig. 15 Sprintz benchmark.
 
 ---
